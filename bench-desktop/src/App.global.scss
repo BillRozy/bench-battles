@@ -1,0 +1,31 @@
+/*
+ * @NOTE: Prepend a `~` to css file paths that are in your node_modules
+ *        See https://github.com/webpack-contrib/sass-loader#imports
+ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap');
+
+html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  background: #575D67;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+.bubbling-animation {
+  animation: bubblingAnimation 1.2s infinite;
+}
+@keyframes bubblingAnimation {
+  0%{     transform: scale(1);    }
+  49%{    transform: scale(0.95); }
+  100%{    transform: scale(1);    }
+}
