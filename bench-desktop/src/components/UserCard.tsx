@@ -1,7 +1,6 @@
-import React from 'react';
-import { useHistory } from 'react-router';
-import { Chip, Badge } from '@material-ui/core';
-import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
+import React, { MouseEventHandler } from 'react';
+import { Chip, Badge } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { User } from '../../../common/types';
 
 type UserCardProps = {
@@ -9,38 +8,12 @@ type UserCardProps = {
   clickable?: boolean;
   user: User;
   fullwidth?: boolean;
+  disabled?: boolean;
   huge?: boolean;
   currentUser?: boolean;
-  onClick?: (event: any) => void | null;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  onContextMenu?: MouseEventHandler<HTMLDivElement>;
 };
-
-const useStyles = makeStyles((theme: Theme) =>
-  createStyles({
-    chip: ({ user, fullwidth, huge }: UserCardProps) => ({
-      margin: theme.spacing(0.25),
-      background: user.color,
-      color: theme.palette.getContrastText(user.color),
-      width: fullwidth ? '100%' : undefined,
-      height: huge ? '100%' : undefined,
-      fontSize: huge ? '1.5em' : undefined,
-    }),
-    chipClickable: {
-      transition: '0.25s',
-      '&:hover': {
-        color: 'white',
-      },
-    },
-    badge: {
-      background: 'black',
-      color: 'white',
-    },
-    badgeRoot: ({ fullwidth, huge }: UserCardProps) => ({
-      width: fullwidth ? '100%' : undefined,
-      height: huge ? '100%' : undefined,
-      maxHeight: '100px',
-    }),
-  })
-);
 
 const UserCard = ({
   user,
@@ -48,29 +21,50 @@ const UserCard = ({
   clickable,
   fullwidth,
   currentUser,
+  disabled,
   huge,
   onClick,
+  onContextMenu,
 }: UserCardProps) => {
-  const { push } = useHistory();
-  const classes = useStyles({ user, clickable, fullwidth, huge });
+  const theme = useTheme();
   return (
     <Badge
       component="div"
       badgeContent="You"
       invisible={!currentUser}
-      classes={{ badge: classes.badge, root: classes.badgeRoot }}
+      sx={{
+        width: fullwidth ? '100%' : undefined,
+        height: huge ? '100%' : undefined,
+        maxHeight: '100px',
+        '& .MuiBadge-badge': {
+          background: 'black',
+          color: 'white',
+        },
+      }}
     >
       <Chip
         component={fullwidth ? 'div' : 'span'}
         variant="outlined"
         size={size}
         label={user.name}
-        classes={{ root: classes.chip, clickable: classes.chipClickable }}
-        onClick={
-          clickable
-            ? onClick || (() => push(`/benches/${user.name}`))
-            : undefined
-        }
+        sx={{
+          margin: theme.spacing(0.25),
+          background: disabled ? theme.palette.grey[700] : user.color,
+          color: theme.palette.getContrastText(
+            disabled ? theme.palette.grey[700] : user.color
+          ),
+          width: fullwidth ? '100%' : undefined,
+          height: huge ? '100%' : undefined,
+          fontSize: huge ? '1.5em' : undefined,
+          '& .MuiChip-clickable': {
+            transition: '0.25s',
+            '&:hover': {
+              color: 'white',
+            },
+          },
+        }}
+        onClick={clickable ? onClick : undefined}
+        onContextMenu={clickable ? onContextMenu : undefined}
       />
     </Badge>
   );
@@ -80,9 +74,11 @@ UserCard.defaultProps = {
   size: 'medium',
   clickable: false,
   fullwidth: true,
+  disabled: false,
   huge: false,
   currentUser: false,
   onClick: null,
+  onContextMenu: null,
 };
 
 export default UserCard;

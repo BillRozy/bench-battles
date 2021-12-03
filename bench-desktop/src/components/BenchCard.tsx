@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { MouseEventHandler } from 'react';
+import { useLocation, useHistory } from 'react-router-dom';
 import { connect } from 'react-redux';
-import { fade } from '@material-ui/core/styles/colorManipulator';
-import Typography from '@material-ui/core/Typography';
+import { alpha, useTheme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import {
   Button,
   ButtonGroup,
@@ -11,184 +12,263 @@ import {
   List,
   ListItem,
   Box,
-} from '@material-ui/core';
-import { grey } from '@material-ui/core/colors';
-import DesktopWindowsIcon from '@material-ui/icons/DesktopWindows';
-import InfoIcon from '@material-ui/icons/Info';
-import { makeStyles, createStyles } from '@material-ui/core/styles';
+} from '@mui/material';
+import { grey } from '@mui/material/colors';
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
+import { Info, Build, Clear } from '@mui/icons-material';
+import { StyledIconButton } from './utility/StyledIconButton';
 import { useWebsocket } from './SocketManager';
-import { BenchCommand, User, Bench } from '../../../common/types';
+import { BenchCommand, User, Bench, OtherCommand } from '../../../common/types';
 import UserCard from './UserCard';
 import type { RootState } from '../redux/store';
-import { establishRDPConnection } from '../helpers/index';
+import { establishRDPConnection, fancySecondsFormat } from '../helpers/index';
 
 type BenchCardProps = {
   bench: Bench;
-  currentUser: User;
+  currentUser: User | null;
   users: User[];
 };
 
-type OwnerBasedStylesProps = {
-  benchOwner: User | undefined;
-};
-
-const useStyles = makeStyles((theme) =>
-  createStyles({
-    root: ({ benchOwner }: OwnerBasedStylesProps) => ({
-      backgroundColor: benchOwner != null ? benchOwner.color : '#EEE',
-      color: benchOwner != null ? '#FFF' : 'inherit',
-      padding: theme.spacing(2),
-    }),
-    action: {
-      margin: 0,
-    },
-    listItem: {
-      justifyContent: 'center',
-      minHeight: '50px',
-    },
-    cardContent: {
-      background: fade(grey[50], 0.9),
-      minWidth: '200px',
-      padding: '0 !important',
-    },
-    paper: {
-      background: 'transparent',
-    },
-    endIcon: {
-      margin: 0,
-    },
-    buttonRoot: ({ benchOwner }: OwnerBasedStylesProps) => ({
-      borderColor: benchOwner ? '#FFF' : 'transparent',
-      color: benchOwner ? '#FFF' : 'inherit',
-    }),
-  })
-);
+const benchActionBtnLabelForOwner = 'Освободить';
+const benchActionBtnLabelForPendingOwner = 'Подтвердить';
+const benchActionBtnLabelForInLine = 'Покинуть очередь';
+const benchActionBtnLabelForFreeBench = 'Занять';
+const benchActionBtnLabelForOwnedBench = 'В Очередь';
 
 const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
   const { subscription } = useWebsocket();
-  const isUserInLine = bench.line.includes(currentUser.name);
-  const isUserOwner = bench.owner === currentUser.name;
-  const benchIsFree = bench.owner === null;
+  const history = useHistory();
+  const location = useLocation();
+  const theme = useTheme();
+  if (currentUser == null) return null;
+  const handleClickMaintenance = () => {
+    subscription?.publish({
+      command: OtherCommand.TOGGLE_MAINTENANCE_BENCH,
+      benchId: bench.id,
+      userId: currentUser?.id,
+    });
+  };
+  const isUserInLine = bench.line.includes(currentUser?.id);
+  const isUserOwner = bench.owner === currentUser?.id;
+  const {
+    pending: isBenchPending,
+    pendingTimeLeft,
+    owner: ownerId,
+    ownedTime,
+  } = bench;
+  const benchIsFree = ownerId === null;
   const takeBenchCmd: BenchCommand = {
-    command: 'bench-request',
-    benchName: bench.name,
-    userName: currentUser.name,
+    command: OtherCommand.REQUEST_BENCH,
+    benchId: bench.id,
+    userId: currentUser?.id,
   };
   const freeBenchCmd: BenchCommand = {
-    command: 'bench-free',
-    benchName: bench.name,
-    userName: currentUser.name,
+    command: OtherCommand.FREE_BENCH,
+    benchId: bench.id,
+    userId: currentUser?.id,
   };
-  const benchLine = users.filter((it) => bench.line.includes(it.name));
-  const benchOwner = users.find((it) => it.name === bench.owner);
-  const requestRDPConnection = () => {
-    establishRDPConnection('10.38.159.3');
-  };
+  const benchLine = bench.line.map((id) => users.find((it) => it.id === id));
+  const benchOwner = users.find((it) => it.id === ownerId);
+  const requestRDPConnection = bench.ip
+    ? () => {
+        establishRDPConnection(bench.ip || '');
+      }
+    : null;
 
-  const classes = useStyles({ benchOwner });
-  const benchActionBtnLabelForOwner = 'Освободить';
-  const benchActionBtnLabelForInLine = 'Покинуть очередь';
-  const benchActionBtnLabelForFreeBench = 'Занять';
-  const benchActionBtnLabelForOwnedBench = 'В Очередь';
+  let headerButtonTitle = 'Занять';
+  let headerButtonAction = takeBenchCmd;
+  if (isUserOwner) {
+    headerButtonAction = isBenchPending ? takeBenchCmd : freeBenchCmd;
+    headerButtonTitle = isBenchPending
+      ? benchActionBtnLabelForPendingOwner
+      : benchActionBtnLabelForOwner;
+  } else if (benchIsFree) {
+    headerButtonTitle = benchActionBtnLabelForFreeBench;
+  } else {
+    headerButtonTitle = isUserInLine
+      ? benchActionBtnLabelForInLine
+      : benchActionBtnLabelForOwnedBench;
+  }
+  const benchOwnerColor =
+    isBenchPending || bench.maintenance
+      ? theme.palette.neutral.dark
+      : benchOwner?.color || theme.palette.neutral.main;
+  const contrastColor = theme.palette.getContrastText(benchOwnerColor);
+  const editBench = () => {
+    history.push({
+      pathname: `/${currentUser?.name}/benches/edit/${bench.id}`,
+      state: { background: location },
+    });
+  };
   return (
-    <Card square elevation={12} className={classes.paper}>
+    <Card
+      square
+      elevation={12}
+      sx={{
+        background: 'transparent',
+      }}
+    >
       <CardHeader
-        classes={{
-          root: classes.root,
-          action: classes.action,
+        sx={{
+          backgroundColor: benchOwnerColor,
+          color: theme.palette.getContrastText(benchOwnerColor),
+          padding: theme.spacing(2),
+          alignContent: 'center',
+          '& .MuiCardHeader-action': {
+            margin: 0,
+            marginLeft: theme.spacing(2),
+            height: '100%',
+          },
+          '& .MuiCardHeader-avatar': {
+            maxWidth: '6em',
+          },
         }}
-        avatar={<Typography variant="subtitle2">{bench.name}</Typography>}
+        avatar={
+          <Typography variant="h6" noWrap title={bench.name}>
+            {bench.name}
+          </Typography>
+        }
         action={
           <ButtonGroup
+            sx={{ minHeight: '32px' }}
             disableElevation
             disableFocusRipple
             size="small"
             variant="outlined"
             aria-label="small outlined button group"
           >
-            {bench.owner === currentUser.name && (
-              <Button
-                classes={{
-                  root: classes.buttonRoot,
-                  endIcon: classes.endIcon,
-                }}
-                onClick={requestRDPConnection}
+            {isUserOwner && (
+              <StyledIconButton
+                contrastColor={contrastColor}
+                color={isUserOwner ? 'currentUser' : 'neutral'}
+                onClick={
+                  requestRDPConnection as MouseEventHandler<HTMLButtonElement>
+                }
                 endIcon={<DesktopWindowsIcon />}
               />
             )}
-            <Button
-              classes={{
-                root: classes.buttonRoot,
-                endIcon: classes.endIcon,
-              }}
-              endIcon={<InfoIcon />}
+            <StyledIconButton
+              contrastColor={contrastColor}
+              color={isUserOwner ? 'currentUser' : 'neutral'}
+              onClick={editBench}
+              endIcon={<Info />}
+            />
+            <StyledIconButton
+              title={
+                bench.maintenance
+                  ? 'Закончить обслуживание бенчи'
+                  : 'Начать обслуживание бенчи'
+              }
+              contrastColor={contrastColor}
+              color={isUserOwner ? 'currentUser' : 'neutral'}
+              onClick={handleClickMaintenance}
+              endIcon={bench.maintenance ? <Clear /> : <Build />}
             />
           </ButtonGroup>
         }
       />
       <CardContent
-        classes={{
-          root: classes.cardContent,
+        sx={{
+          background: alpha(grey[50], 0.9),
+          minWidth: '200px',
+          padding: '0 !important',
         }}
       >
         <List component="nav" aria-label="bench users" disablePadding>
-          <ListItem divider classes={{ root: classes.listItem }}>
+          <ListItem
+            divider
+            sx={{
+              justifyContent: 'center',
+              minHeight: '50px',
+            }}
+          >
             {isUserOwner || benchIsFree ? (
               <Button
                 size="small"
                 aria-label="take bench or free bench"
-                color="secondary"
+                color="primary"
                 variant="outlined"
-                onClick={() =>
-                  subscription?.send(isUserOwner ? freeBenchCmd : takeBenchCmd)
+                disabled={
+                  benchIsFree
+                    ? bench.maintenance
+                    : !isUserOwner && bench.maintenance
                 }
+                onClick={() => subscription?.publish(headerButtonAction)}
               >
-                {isUserOwner
-                  ? benchActionBtnLabelForOwner
-                  : benchActionBtnLabelForFreeBench}
+                {headerButtonTitle}
               </Button>
             ) : (
               benchOwner && (
                 <UserCard
                   user={benchOwner}
+                  disabled={isBenchPending}
                   fullwidth
-                  currentUser={benchOwner.name === currentUser.name}
+                  currentUser={benchOwner.name === currentUser?.name}
                 />
               )
             )}
           </ListItem>
+          {bench.owner && (
+            <ListItem divider dense>
+              <Box mx="auto">
+                {fancySecondsFormat(
+                  isBenchPending ? pendingTimeLeft : ownedTime
+                )}
+              </Box>
+            </ListItem>
+          )}
           <ListItem selected divider dense>
             <Box mx="auto">Очередь</Box>
           </ListItem>
           {benchLine.length === 0 && (benchIsFree || isUserOwner) && (
-            <ListItem divider classes={{ root: classes.listItem }}>
+            <ListItem
+              divider
+              sx={{
+                justifyContent: 'center',
+                minHeight: '50px',
+              }}
+            >
               Пусто
             </ListItem>
           )}
           {benchLine.map((it) => {
+            if (it == null) {
+              return null;
+            }
             return (
               <ListItem
                 divider
-                classes={{ root: classes.listItem }}
+                sx={{
+                  justifyContent: 'center',
+                  minHeight: '50px',
+                }}
                 key={it.name}
               >
                 <UserCard
                   user={it}
                   fullwidth
-                  currentUser={it.name === currentUser.name}
+                  currentUser={it.name === currentUser?.name}
                 />
               </ListItem>
             );
           })}
           {!benchIsFree && !isUserOwner && (
-            <ListItem classes={{ root: classes.listItem }}>
+            <ListItem
+              sx={{
+                justifyContent: 'center',
+                minHeight: '50px',
+              }}
+            >
               <Button
                 size="small"
                 aria-label="go in line"
-                color="secondary"
+                color="primary"
                 variant="outlined"
+                disabled={isUserInLine ? false : bench.maintenance}
                 onClick={() =>
-                  subscription?.send(isUserInLine ? freeBenchCmd : takeBenchCmd)
+                  subscription?.publish(
+                    isUserInLine ? freeBenchCmd : takeBenchCmd
+                  )
                 }
               >
                 {isUserInLine

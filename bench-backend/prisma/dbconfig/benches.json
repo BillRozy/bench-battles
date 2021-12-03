@@ -1,0 +1,122 @@
+[
+  {
+    "name": "MR-02",
+    "ip": "10.38.159.2",
+    "stid": "178757314",
+    "build": "162",
+    "swVer": "CW45.7.00",
+    "voiceControl": true,
+    "gsimCredentials": {
+      "username": "USDPGTNCN315CC4",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-03",
+    "ip": "10.38.159.3",
+    "stid": "178757314",
+    "build": "159",
+    "swVer": "CW21.5.02",
+    "voiceControl": false,
+    "gsimCredentials": {
+      "username": "USDPGTD0431X5T",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-04",
+    "ip": "10.38.159.4",
+    "stid": "178757548",
+    "build": "162",
+    "swVer": "CW45.7.00",
+    "voiceControl": true,
+    "gsimCredentials": {
+      "username": "USDPGTNCN161G26",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-06",
+    "ip": "10.38.159.6",
+    "stid": "178757298",
+    "build": "162",
+    "swVer": "CW45.7.00",
+    "voiceControl": true,
+    "gsimCredentials": {
+      "username": "USDPGTNCN315CBX",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-08",
+    "ip": "10.38.159.8",
+    "stid": "178758666",
+    "build": "162",
+    "swVer": "CW45.7.00",
+    "voiceControl": true,
+    "gsimCredentials": {
+      "username": "USDPGTNCN36BG4L",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-10",
+    "ip": "10.38.159.10",
+    "stid": "178758226",
+    "build": "162",
+    "swVer": "CW45.7.00",
+    "voiceControl": false,
+    "gsimCredentials": {
+      "username": "USDPGTD0431XK9",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-13",
+    "ip": "10.38.159.13",
+    "stid": "178757383",
+    "build": "unknown",
+    "swVer": "unknown",
+    "voiceControl": false,
+    "gsimCredentials": {
+      "username": "USDPGTNCN374T6H",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-14",
+    "ip": "10.38.159.14",
+    "stid": "178805057",
+    "build": "161",
+    "swVer": "CW42.6.00",
+    "voiceControl": false,
+    "gsimCredentials": {
+      "username": "USDPGTNCN374SZM",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-19",
+    "ip": "10.38.159.19",
+    "stid": "178805065",
+    "build": "161",
+    "swVer": "CW42.6.00",
+    "voiceControl": false,
+    "gsimCredentials": {
+      "username": "USDPGTNCN374TF8",
+      "password": "Gsim_Sept2021!"
+    }
+  },
+  {
+    "name": "MR-21",
+    "ip": "10.38.159.21",
+    "stid": "178757886",
+    "build": "162",
+    "swVer": "CW45.7.00",
+    "voiceControl": true,
+    "gsimCredentials": {
+      "username": "USDPGTDCN3920KK",
+      "password": "Gsim_Sept2021!"
+    }
+  }
+]

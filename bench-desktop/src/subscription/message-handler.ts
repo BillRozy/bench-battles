@@ -1,74 +1,93 @@
 import {
   addBenches,
-  changeBenchOwner,
-  addUserToBenchLine,
-  removeUserFromBenchLine,
+  updateBenchCache,
+  addBench,
+  removeBench,
+  updateBench,
 } from '../redux/slices/benchesSlice';
-import { addUsers } from '../redux/slices/usersSlice';
+import {
+  addUsers,
+  addUser,
+  updateUser,
+  removeUser,
+} from '../redux/slices/usersSlice';
+import { setDbVersion } from '../redux/slices/preferencesSlice';
 import store from '../redux/store';
-import type {
-  BenchEvent,
+import {
+  EntityCacheUpdateEvent,
   Event,
   BenchesSubEvent,
+  Entity,
+  EventType,
+  BenchCacheUpdate,
+  CrudEvent,
+  CrudEntityEvent,
+  WithID,
   User,
+  Bench,
 } from '../../../common/types';
+
 import { appLogger } from '../log';
 
-export default class MessageHandler {
-  readonly ver: string;
+const CRUD_MAPPING = {
+  [Entity.USER]: {
+    [CrudEntityEvent.ENTITY_CREATED]: (data: WithID) => addUser(data as User),
+    [CrudEntityEvent.ENTITY_REMOVED]: (data: WithID) =>
+      removeUser(data as User),
+    [CrudEntityEvent.ENTITY_UPDATED]: (data: WithID) =>
+      updateUser(data as User),
+  },
+  [Entity.BENCH]: {
+    [CrudEntityEvent.ENTITY_CREATED]: (data: WithID) => addBench(data as Bench),
+    [CrudEntityEvent.ENTITY_REMOVED]: (data: WithID) =>
+      removeBench(data as Bench),
+    [CrudEntityEvent.ENTITY_UPDATED]: (data: WithID) =>
+      updateBench(data as Bench),
+  },
+};
 
-  constructor(ver: string) {
-    this.ver = ver;
-  }
-
+export default {
   handle(json: Event) {
-    appLogger.debug(
-      `${this.constructor.name} v${this.ver}: got message - ${JSON.stringify(
-        json
-      )}`
-    );
-    if (json.event === 'benches-sub-info') {
-      const { benches, users } = json as BenchesSubEvent;
-      store.dispatch(addUsers(users));
-      store.dispatch(addBenches(benches));
-    } else {
-      const { event, userName, benchName } = json as BenchEvent;
-      const user: User =
-        store
-          .getState()
-          .users.all.find(({ name }: User) => name === userName) || null;
-      // if (user == null) {
-      //   appLogger.warn(`User with name == ${userName} doesn't exists!`);
-      //   return;
-      // }
-      switch (event) {
-        case 'bench-new-owner':
-          store.dispatch(
-            changeBenchOwner({
-              user,
-              benchName,
-            })
-          );
-          break;
-        case 'bench-new-user-in-line':
-          store.dispatch(
-            addUserToBenchLine({
-              user,
-              benchName,
-            })
-          );
-          break;
-        case 'bench-removed-user-from-line':
-          store.dispatch(
-            removeUserFromBenchLine({
-              user,
-              benchName,
-            })
-          );
-          break;
-        default:
-          break;
+    // appLogger.debug(
+    //   `${this.constructor.name} v${this.ver}: got message - ${JSON.stringify(
+    //     json
+    //   )}`
+    // );
+    switch (json.event) {
+      case EventType.ENTITY_CACHE_UPDATE: {
+        this.handleEntityUpdate(json as EntityCacheUpdateEvent);
+        break;
       }
+      case EventType.INITIAL_BENCHES_STATE: {
+        const { benches, users, version } = json as BenchesSubEvent;
+        store.dispatch(addUsers(users));
+        store.dispatch(addBenches(benches));
+        store.dispatch(setDbVersion(version || 'unknown'));
+        break;
+      }
+      case CrudEntityEvent.ENTITY_CREATED:
+      case CrudEntityEvent.ENTITY_REMOVED:
+      case CrudEntityEvent.ENTITY_UPDATED: {
+        const { entity, data, event } = json as CrudEvent;
+        store.dispatch(CRUD_MAPPING[entity][event](data));
+        break;
+      }
+      default:
+        break;
     }
-  }
-}
+  },
+
+  handleEntityUpdate(json: EntityCacheUpdateEvent) {
+    // appLogger.debug(
+    //   `${this.constructor.name} v${this.ver}: handleEntityUpdate`
+    // );
+    const { entity, cache } = json;
+    switch (entity) {
+      case Entity.BENCH:
+        store.dispatch(updateBenchCache(cache as BenchCacheUpdate));
+        break;
+      default:
+        appLogger.warn(`Unknown entity '${entity}' update`);
+    }
+  },
+};

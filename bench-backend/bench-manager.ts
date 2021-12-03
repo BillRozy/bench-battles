@@ -1,95 +1,247 @@
-const benchConfig = require('./config/benches.json');
-const userConfig = require('./config/users.json');
 import BenchModel from './models/bench';
 import UserModel from './models/user';
-import { BenchEvent, BenchCommand, BenchesSubEvent,
-         EventType, CommandType, Event, Bench, User } from '../common/types';
+import { IModel } from './models';
+import { BenchCommand, BenchesSubEvent, EventType, OtherCommand, Bench, User,
+         UserPrisma, BenchCacheUpdateEvent, CrudCommand, Entity, BenchPrisma, WithID } from '../common/types';
+import { fromEvent, from, firstValueFrom } from 'rxjs';
+import { bufferTime, concatMap, toArray } from 'rxjs/operators';
+import { merge } from 'lodash';
+import PersistentStateManager from './state/persistent'
+import CacheStateManager from './state/cache'
+import logger from './logger';
+import EventEmitter from 'events';
+
+
+abstract class ModelManager<T extends IModel<V, K>, V extends WithID = WithID, K extends WithID = WithID> extends EventEmitter {
+  protected models : Map<number, T> = new Map();
+  protected persistentManager: PersistentStateManager;
+  protected cacheManager: CacheStateManager;
+  protected notifier: Function | undefined;
+  constructor(persistent : PersistentStateManager, cache : CacheStateManager, notifier?: Function) {
+    super();
+    this.persistentManager = persistent;
+    this.cacheManager = cache;
+    this.notifier = notifier;
+  }
+
+  abstract create(from: V) : Promise<T>;
+
+  async createAll(fromArg: V[]) : Promise<T[]> {
+    return firstValueFrom(from(fromArg).pipe(concatMap(it => this.create(it)), toArray()));
+  }
+
+  stopAll() {
+    this.models.forEach(model => {
+      model.stopAllActions();
+    })
+  }
+
+  add(model: T) {
+    this.models.set(model.getId(), model);
+  }
+
+  addAll(models: T[]) {
+    models.forEach(model => {
+      this.add(model);
+    })
+  }
+
+  update(rawData: V) : IModel<V, K> | undefined {
+    this.get(rawData.id)?.update(rawData);
+    return this.get(rawData.id);
+  }
+
+  remove(obj: WithID) : IModel<V, K> | undefined {
+    const model = this.get(obj.id);
+    this.models.delete(obj.id);
+    return model;
+  }
+
+  get(key: number) : T | undefined {
+    return this.models.get(key);
+  }
+
+  getAsJSON(key: number) : K | undefined {
+    return this.get(key)?.toJSON();
+  }
+
+  getAllAsJSON() : K[] {
+    const result = [];
+    for (const key of this.models.keys()) {
+      const json = this.getAsJSON(key);
+      if (json) {
+        result.push(json);
+      }
+    }
+    return result;
+  }
+}
+
+class BenchModelManager extends ModelManager<BenchModel, BenchPrisma, Bench> {
+  async create(from: BenchPrisma) : Promise<BenchModel> {
+    const benchCache = await this.cacheManager.loadBenchCache(from.id) || await this.cacheManager.createBenchCache(from);
+    const bench = new BenchModel(from, benchCache);
+    const benchEvents = fromEvent<BenchCacheUpdateEvent>(bench, EventType.ENTITY_CACHE_UPDATE);
+    const buffered = benchEvents.pipe(bufferTime(250));
+    buffered.subscribe({
+      next: (val: BenchCacheUpdateEvent[]) => {
+        if (val.length === 0) return;
+        const update = val.reduce<BenchCacheUpdateEvent>((prev, next) => {
+          return {
+            event: prev.event,
+            entity: prev.entity,
+            cache: merge(prev.cache, next.cache)
+          }
+        }, val[0]);
+        this.cacheManager.updateBenchCache(update.cache, true);
+        this.notifier && this.notifier(update);
+      }
+    });
+    this.add(bench);
+    return bench;
+  }
+}
+
+class UserModelManager extends ModelManager<UserModel, UserPrisma, User> {
+  async create({ name, id, color }: UserPrisma) : Promise<UserModel> {
+    const user = new UserModel(name, id, color || undefined);
+    this.add(user);
+    return Promise.resolve(user);
+  }
+}
+
 
 export default class BenchManager {
-  private benches: Map<string, BenchModel>;
-  private users: Map<string, UserModel>;
-  private notify: (notification: Event) => void;
-  constructor(notify: (notification: Event) => void) {
-    this.benches = new Map();
-    this.users = new Map();
-    this.notify = notify;
-    this.readBenchesConfig();
-    this.readUsersConfig();
+  private persistentManager: PersistentStateManager;
+  private cacheManager: CacheStateManager;
+  private cache: Map<Entity, ModelManager<IModel>> = new Map();
+  private version: number | null = null;
+  constructor(persistentManager: PersistentStateManager, cacheManager: CacheStateManager) {
+    this.persistentManager = persistentManager;
+    this.cacheManager = cacheManager;
   }
 
-  readBenchesConfig() {
-    benchConfig.forEach(({ name, info }: Bench) => {
-      const bench = new BenchModel(name, info)
-        .on(EventType.NEW_OWNER, (ntf: BenchEvent) => {
-          this.benches.forEach((b) => {
-            if (b === bench) {
-              return;
-            }
-            const user = this.users.get(ntf.userName);
-            if (user != null) {
-              b.freeBench(user);
-            }
-          });
-          this.notify(ntf);
-        })
-        .on(EventType.NEW_USER_IN_LINE, this.notify)
-        .on(EventType.REMOVED_USER_FROM_LINE, this.notify);
-      this.benches.set(name, bench);
+  async initialize(notifier?: (...args: any) => void ) {
+    this.cache.forEach(manager => {
+      manager.stopAll();
     });
+    this.cache.set(Entity.BENCH, new BenchModelManager(this.persistentManager, this.cacheManager, notifier));
+    this.cache.set(Entity.USER, new UserModelManager(this.persistentManager, this.cacheManager, notifier));
+    const persistentState = await this.persistentManager.load();
+    this.version = persistentState.version;
+    if (!await this.cacheManager.hasCache() || !await this.cacheManager.isCacheVersionOK(persistentState.version)) {
+      logger.info('Doesn\'t have cache or it is outdated, so need to create it...');
+      await this.cacheManager.create(persistentState);
+    }
+    logger.info('Cache was created!');
+    for (const [entity, manager] of this.cache.entries()) {
+      manager.addAll(await manager.createAll(persistentState[entity]));
+      logger.info(`Added models for ${entity}`);
+    }
+    logger.info('App cache initialized!');
   }
 
-  readUsersConfig() {
-    userConfig.forEach((name: string) => {
-      this.users.set(name, new UserModel(name));
-    });
+  createEntity = async (data: any, entity: Entity) : Promise<IModel | undefined> => {
+    const manager = this.cache.get(entity);
+    if (manager) {
+      return manager.create(data);
+    }
+    return Promise.resolve(undefined);
+  }
+
+  addEntity = (model: IModel, entity: Entity) => {
+    const manager = this.cache.get(entity);
+    if (manager) {
+      manager.add(model);
+    }
+  }
+
+  getEntity = (key: number, entity: Entity) : IModel | undefined => {
+    const manager = this.cache.get(entity);
+    if (manager) {
+      return manager.get(key);
+    }
+    return undefined;
+  }
+
+  deleteEntity = (data: WithID, entity: Entity) : IModel | undefined => {
+    const manager = this.cache.get(entity);
+    if (manager) {
+      return manager.remove(data);
+    }
+    return undefined;
+  }
+
+  updateEntity = (data: any, entity: Entity) => {
+    const manager = this.cache.get(entity);
+    if (manager) {
+      return manager.update(data);
+    }
+    return undefined;
+  }
+
+  private CRUD_MAP = {
+    [CrudCommand.CREATE_ENTITY]: this.createEntity,
+    [CrudCommand.DELETE_ENTITY]: this.deleteEntity,
+    [CrudCommand.UPDATE_ENTITY]: this.updateEntity,
   }
 
   getState() : BenchesSubEvent {
     return {
-      benches: this.getBenchesState(),
-      users: this.getUsersState(),
+      ...this.getRawState(),
       event: EventType.INITIAL_BENCHES_STATE,
     };
   }
 
+  getRawState = (): { benches: Bench[], users: User[], version: number | null } => {
+    return {
+      benches: this.getBenchesState(),
+      users: this.getUsersState(),
+      version: this.version
+    }
+  }
+
   getUsersState() : User[] {
-    const users: User[] = [];
-    this.users.forEach((user: UserModel) => {
-      users.push(user.toJSON());
-    });
-    return users;
+    return this.cache.get(Entity.USER)?.getAllAsJSON() as User[] || [];
   }
 
   getBenchesState() : Bench[] {
-    const benches: Bench[] = [];
-    this.benches.forEach((bench) => {
-      benches.push(bench.toJSON());
-    });
-    return benches;
+    return this.cache.get(Entity.BENCH)?.getAllAsJSON() as Bench[] || [];
   }
 
   handleBenchCommand(wsJson: BenchCommand) {
-    const { command, benchName, userName } = wsJson;
-    const bench = this.benches.get(benchName);
-    const user = this.users.get(userName);
+    logger.debug(`Started handling command ${JSON.stringify(wsJson)}`);
+    const { command, benchId, userId } = wsJson;
+    const bench = this.cache.get(Entity.BENCH)?.get(benchId) as BenchModel;
+    const user = this.cache.get(Entity.USER)?.get(userId) as UserModel;
     if (bench == null) {
-      console.log(`Unrecognized bench ${benchName}`);
+      logger.warn(`Unrecognized bench id ${benchId}`);
       return;
     }
     if (user == null) {
-      console.log(`Unrecognized user ${userName}`);
+      logger.warn(`Unrecognized user id ${userId}`);
       return;
     }
     switch (command) {
-      case CommandType.REQUEST_BENCH:
-        bench.requestBench(user);
+      case OtherCommand.REQUEST_BENCH:
+        bench.requestBench(userId);
         break;
-      case CommandType.FREE_BENCH:
-        bench.freeBench(user);
+      case OtherCommand.FREE_BENCH:
+        bench.freeBench(userId);
+        break;
+      case OtherCommand.TOGGLE_MAINTENANCE_BENCH:
+        bench.maintenance = !bench.maintenance;
         break;
       default:
-        console.log(`Unrecognized command ${command}`);
+        logger.warn(`Unrecognized command ${command}`);
     }
-    console.log(`Handled command ${JSON.stringify(wsJson)}`);
+    logger.debug(`Handled command ${JSON.stringify(wsJson)}`);
+  }
+
+  // CRUD
+
+  async applyCrudEffectToCache(crudCommand: CrudCommand, crudEntity: Entity, data: any) {
+    logger.debug(`applyCrudEffectToCache ${crudCommand} ${crudEntity} ${JSON.stringify(data)}`);
+    return this.CRUD_MAP[crudCommand](data, crudEntity);
   }
 }

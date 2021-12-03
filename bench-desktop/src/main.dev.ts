@@ -11,18 +11,8 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import path from 'path';
-import { app, BrowserWindow, shell, session, Tray, Menu } from 'electron';
-import { autoUpdater } from 'electron-updater';
-import log from 'electron-log';
-import MenuBuilder from './menu';
-
-export default class AppUpdater {
-  constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
-    autoUpdater.checkForUpdatesAndNotify();
-  }
-}
+import { app, BrowserWindow, shell, session } from 'electron';
+import registerTrayToMainWindow from './helpers/tray';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -41,8 +31,8 @@ if (
 const installExtensions = async () => {
   const PATH_TO_EXTS =
     'C:/Users/Professional/AppData/Local/Google/Chrome/User Data/Default/Extensions';
-  const REACT_DEV_TOOLS = 'fmkadmapgofadopljbjfkapdkoienihi/4.10.1_0';
-  const REDUX_DEV_TOOLS = 'lmhkpmbekcpmknklioeibfkpmmfibljd/2.17.0_0';
+  const REACT_DEV_TOOLS = 'fmkadmapgofadopljbjfkapdkoienihi/4.18.0_0';
+  const REDUX_DEV_TOOLS = 'lmhkpmbekcpmknklioeibfkpmmfibljd/2.17.2_0';
   const extensions = [REACT_DEV_TOOLS, REDUX_DEV_TOOLS];
 
   try {
@@ -54,15 +44,7 @@ const installExtensions = async () => {
   } catch (err) {
     console.log(err);
   }
-
-  // return installer
-  //   .default(
-  //     extensions.map((name) => installer[name]),
-  //     forceDownload
-  //   )
-  //   .catch(console.log);
 };
-let tray: Tray | null = null;
 
 const createWindow = async () => {
   const RESOURCES_PATH = app.isPackaged
@@ -75,12 +57,13 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
-    width: 1024,
-    height: 728,
+    minWidth: 800,
+    minHeight: 600,
     icon: getAssetPath('icon.png'),
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
+      nodeIntegrationInWorker: true,
     },
   });
 
@@ -95,14 +78,22 @@ const createWindow = async () => {
     if (process.env.START_MINIMIZED) {
       mainWindow.minimize();
     } else {
+      mainWindow.maximize();
       mainWindow.show();
-      mainWindow.focus();
-      mainWindow.webContents.openDevTools();
+      // mainWindow.webContents.openDevTools();
     }
   });
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+  mainWindow.on('close', (event) => {
+    event.preventDefault();
+    mainWindow?.hide();
+  });
+
+  mainWindow.on('focus', () => {
+    mainWindow?.webContents.send('visibility-change', true);
+  });
+  mainWindow.on('blur', () => {
+    mainWindow?.webContents.send('visibility-change', false);
   });
 
   // const menuBuilder = new MenuBuilder(mainWindow);
@@ -116,77 +107,51 @@ const createWindow = async () => {
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
-  new AppUpdater();
-
-  tray = new Tray(path.join(__dirname, '../assets', 'icon.ico'));
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Развернуть Приложение',
-      click() {
-        mainWindow?.show();
-      },
-    },
-    {
-      type: 'separator',
-    },
-    {
-      label: 'Бенчи:',
-      submenu: Menu.buildFromTemplate([
-        {
-          label: 'MR-02',
-          click() {},
-        },
-      ]),
-    },
-    {
-      label: 'Выйти',
-      role: 'close',
-    },
-  ]);
-  tray.setToolTip('Gen12 Bench');
-  tray.setContextMenu(contextMenu);
-  tray.on('double-click', () => {
-    if (mainWindow) {
-      mainWindow.show();
-      tray?.displayBalloon({
-        iconType: 'info',
-        title: 'TEST',
-        content: 'test text',
-      });
-    }
-  });
+  const tray = registerTrayToMainWindow(app, mainWindow);
 };
 
 /**
  * Add event listeners...
  */
 
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('activate', () => {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (mainWindow === null) createWindow();
+  });
+  app.on('second-instance', () => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+  (async () => {
+    await app.whenReady();
+    try {
+      if (
+        process.env.NODE_ENV === 'development' ||
+        process.env.DEBUG_PROD === 'true'
+      ) {
+        await installExtensions();
+      }
+      setTimeout(createWindow, 1000);
+    } catch (err) {
+      console.log(err);
+    }
+  })();
+}
+
 app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
+  app.releaseSingleInstanceLock();
   if (process.platform !== 'darwin') {
     app.quit();
   }
-});
-
-(async () => {
-  await app.whenReady();
-  try {
-    if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.DEBUG_PROD === 'true'
-    ) {
-      await installExtensions();
-    }
-    setTimeout(createWindow, 1000);
-    // await createWindow();
-  } catch (err) {
-    console.log(err);
-  }
-})();
-
-app.on('activate', () => {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (mainWindow === null) createWindow();
 });
