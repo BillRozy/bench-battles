@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React from 'react';
 import {
   Switch,
   Route,
@@ -10,12 +10,11 @@ import {
 import { connect } from 'react-redux';
 import { Location } from 'history';
 import Box from '@mui/material/Box';
-import Dialog from '@mui/material/Dialog';
 import UserSelectionFrame from './UserSelectionFrame';
 import BenchesStateFrame from './BenchesStateFrame';
 import UserDashboard from './UserDashboard';
 import { BenchEditFormDialogWrapper } from './BenchEdit';
-import UserEditForm from './UserEdit';
+import { UserEditFormDialog } from './UserEdit';
 import type { RootState } from '../redux/store';
 import { User, Bench } from '../../../common/types';
 
@@ -28,8 +27,6 @@ type Props = {
 type ModalHistoryState = {
   background: Location;
 };
-
-const UserEditFormModal = forwardRef(UserEditForm);
 
 const BenchEditFormDialogWrapperInRoute = ({
   benches,
@@ -56,24 +53,12 @@ const ModalSwitch = ({ benches, currentUser }: Omit<Props, 'benchesIds'>) => {
   return (
     <Switch>
       <Route path="/:userName/users/edit/:userId">
-        <Dialog
+        <UserEditFormDialog
           open
-          maxWidth="md"
-          scroll="paper"
-          aria-labelledby="modal-modal-title"
-          aria-describedby="modal-modal-description"
+          form={currentUser}
+          onFinish={history.goBack}
           onBackdropClick={history.goBack}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <UserEditFormModal
-            form={currentUser || undefined}
-            onPositiveResult={history.goBack}
-          />
-        </Dialog>
+        />
       </Route>
       <Route path="/:userName/benches/edit/:benchId?">
         <BenchEditFormDialogWrapperInRoute benches={benches} />

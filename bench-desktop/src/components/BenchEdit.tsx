@@ -18,17 +18,14 @@ import {
   Grid,
   Stack,
   Divider,
-  Alert,
-  AlertTitle,
   Dialog,
   DialogProps,
   DialogContent,
-  DialogTitle,
   DialogActions,
 } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
 import { Edit, Close, Delete, Save } from '@mui/icons-material';
-import { FormTextField, FormBooleanField } from './forms';
+import { FormTextField, FormBooleanField, AlertResponseError } from './forms';
 import {
   StyledIconButton,
   NoMarginIconButton,
@@ -413,12 +410,10 @@ const BenchEditForm = ({
       />
       <Divider />
       {response != null && (
-        <Alert severity="error" onClose={() => setResponse(undefined)}>
-          <AlertTitle>Error</AlertTitle>
-          Async operation failed, check error here:
-          <br />
-          {response.data?.toString()}
-        </Alert>
+        <AlertResponseError
+          response={response}
+          onClose={() => setResponse(undefined)}
+        />
       )}
       {response != null && <Divider />}
       <BenchEditActions
@@ -477,12 +472,10 @@ export const BenchEditFormDialogWrapper = ({
         />
         {response != null && (
           <>
-            <Alert severity="error" onClose={() => setResponse(undefined)}>
-              <AlertTitle>Error</AlertTitle>
-              Async operation failed, check error here:
-              <br />
-              {response.data?.toString()}
-            </Alert>
+            <AlertResponseError
+              response={response}
+              onClose={() => setResponse(undefined)}
+            />
             <Divider />
           </>
         )}
