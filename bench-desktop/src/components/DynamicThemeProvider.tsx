@@ -41,7 +41,7 @@ declare module '@mui/material/Switch' {
 const getDefaultThemeOpts = (user: User | null = null) => ({
   palette: {
     primary: {
-      main: grey[700],
+      main: grey[800],
     },
     secondary: {
       main: grey[100],
