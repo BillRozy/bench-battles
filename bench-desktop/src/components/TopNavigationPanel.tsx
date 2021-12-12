@@ -24,9 +24,15 @@ type Props = {
   currentUser: User | null;
   appVersion: string | number;
   dbVersion: string | number;
+  serverURI: string;
 };
 
-const TopNavigationPanel = ({ currentUser, appVersion, dbVersion }: Props) => {
+const TopNavigationPanel = ({
+  currentUser,
+  appVersion,
+  dbVersion,
+  serverURI,
+}: Props) => {
   const { subscription } = useWebsocket();
   const location = useLocation();
   const history = useHistory();
@@ -167,6 +173,14 @@ const TopNavigationPanel = ({ currentUser, appVersion, dbVersion }: Props) => {
                     <ListItemIcon>БД: </ListItemIcon>
                     <ListItemText inset>{dbVersion}</ListItemText>{' '}
                   </MenuItem>
+                  <MenuItem divider disabled selected>
+                    Сервер:
+                  </MenuItem>
+                  <MenuItem dense>
+                    <ListItemText>
+                      {serverURI.includes('beta') ? 'Бета' : 'Основной'}
+                    </ListItemText>{' '}
+                  </MenuItem>
                 </MenuList>
               </ClickAwayListener>
             </Popover>
@@ -182,6 +196,7 @@ const mapStateToProps = (state: RootState) => {
     currentUser: state.users.currentUser,
     appVersion: state.preferences.appVersion,
     dbVersion: state.preferences.dbVersion,
+    serverURI: state.preferences.serverURI,
   };
 };
 

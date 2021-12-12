@@ -35,6 +35,10 @@ export default class Subscription extends EventEmitter {
     return !!this.connected;
   }
 
+  disconnect() {
+    this.websocket?.disconnect();
+  }
+
   connect() {
     this.websocket?.disconnect();
     this.websocket = io(this.URI, {

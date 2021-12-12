@@ -51,14 +51,14 @@ const PendingDialog = ({ bench, user, timeLeft }: Props) => {
       <DialogActions>
         <Button
           onClick={() => subscription?.publish(freeBenchCmd)}
-          color="secondary"
+          color="primary"
           variant="outlined"
         >
           Отклонить
         </Button>
         <Button
           onClick={() => subscription?.publish(takeBenchCmd)}
-          color="secondary"
+          color="primary"
           variant="outlined"
         >
           Подтвердить

@@ -47,7 +47,10 @@ const BenchEditFormDialogWrapperInRoute = ({
   );
 };
 
-const ModalSwitch = ({ benches, currentUser }: Omit<Props, 'benchesIds'>) => {
+const SignOnModalSwitch = ({
+  benches,
+  currentUser,
+}: Omit<Props, 'benchesIds'>) => {
   const history = useHistory();
 
   return (
@@ -67,6 +70,22 @@ const ModalSwitch = ({ benches, currentUser }: Omit<Props, 'benchesIds'>) => {
   );
 };
 
+const ModalSwitch = () => {
+  const history = useHistory();
+  return (
+    <Switch>
+      <Route exact path="/users/new">
+        <UserEditFormDialog
+          open
+          form={null}
+          onFinish={history.goBack}
+          onBackdropClick={history.goBack}
+        />
+      </Route>
+    </Switch>
+  );
+};
+
 const MainSwitch = ({ currentUser, benchesIds, benches }: Props) => {
   const location = useLocation<ModalHistoryState>();
 
@@ -74,11 +93,14 @@ const MainSwitch = ({ currentUser, benchesIds, benches }: Props) => {
   return (
     <Box height="100%">
       <Switch>
-        <Route exact path="/users">
+        <Route path="/users">
           {currentUser != null ? (
             <Redirect to={`/${currentUser.name}/benches`} />
           ) : (
-            <UserSelectionFrame />
+            <>
+              <UserSelectionFrame />
+              {background && <ModalSwitch />}
+            </>
           )}
         </Route>
         <Route path="/:userName">
@@ -98,7 +120,10 @@ const MainSwitch = ({ currentUser, benchesIds, benches }: Props) => {
                 </Route>
               </Switch>
               {background && (
-                <ModalSwitch benches={benches} currentUser={currentUser} />
+                <SignOnModalSwitch
+                  benches={benches}
+                  currentUser={currentUser}
+                />
               )}
             </UserDashboard>
           )}

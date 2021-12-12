@@ -13,6 +13,7 @@ import 'regenerator-runtime/runtime';
 import path from 'path';
 import { app, BrowserWindow, shell, session } from 'electron';
 import registerTrayToMainWindow from './helpers/tray';
+import MenuBuilder from './menu';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -67,6 +68,9 @@ const createWindow = async () => {
     },
   });
 
+  const menuBuilder = new MenuBuilder(mainWindow);
+  app.applicationMenu = menuBuilder.buildMenu();
+
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   // @TODO: Use 'ready-to-show' event
@@ -95,9 +99,6 @@ const createWindow = async () => {
   mainWindow.on('blur', () => {
     mainWindow?.webContents.send('visibility-change', false);
   });
-
-  // const menuBuilder = new MenuBuilder(mainWindow);
-  // menuBuilder.buildMenu();
 
   // Open urls in the user's browser
   mainWindow.webContents.on('new-window', (event, url) => {
