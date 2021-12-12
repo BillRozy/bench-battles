@@ -8,7 +8,7 @@ import { User, Bench } from '../../../common/types';
 import type { RootState } from '../redux/store';
 import BenchCard from './BenchCard';
 import CrownIcon from '../img/Simple_gold_crown.png';
-import MaintenanceSpinner from './utility/MaintenanceSpinner';
+import MaintenanceIcon from '../img/maintenance-rotatable-icon.png';
 import FilterableTagsList from './utility/FilterableTagsList';
 
 interface IBenchesStateProps {
@@ -45,7 +45,16 @@ const BenchCardGridWrap = connect((state: RootState) => ({
               alt="crown"
             />
           )}
-          {bench.maintenance && <MaintenanceSpinner />}
+          {bench.maintenance && (
+            <Box
+              padding="0.5em"
+              component="img"
+              height="4em"
+              width="auto"
+              src={MaintenanceIcon}
+              alt="maintenance"
+            />
+          )}
           <Badge badgeContent={bench.build} max={1000} color="error">
             <BenchCard bench={bench} />
           </Badge>

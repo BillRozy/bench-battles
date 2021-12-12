@@ -38,8 +38,7 @@ export const { setServerURI, setDbVersion } = prefsSlice.actions;
 const persistConfig = {
   key: 'prefs',
   storage: createElectronStorage(),
-  whitelist: [],
-  // whitelist: ['serverURI'],
+  whitelist: ['serverURI'],
   blacklist: ['appVersion', 'dbVersion'],
 };
 

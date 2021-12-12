@@ -89,10 +89,9 @@ const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
       ? benchActionBtnLabelForInLine
       : benchActionBtnLabelForOwnedBench;
   }
-  const benchOwnerColor =
-    isBenchPending || bench.maintenance
-      ? theme.palette.neutral.dark
-      : benchOwner?.color || theme.palette.neutral.main;
+  const benchOwnerColor = isBenchPending
+    ? theme.palette.neutral.dark
+    : benchOwner?.color || theme.palette.neutral.main;
   const contrastColor = theme.palette.getContrastText(benchOwnerColor);
   const editBench = () => {
     history.push({
@@ -106,6 +105,7 @@ const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
       elevation={12}
       sx={{
         background: 'transparent',
+        opacity: bench.maintenance ? 0.55 : 1,
       }}
     >
       <CardHeader
@@ -124,8 +124,8 @@ const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
           },
         }}
         avatar={
-          <Typography variant="h6" noWrap title={bench.name}>
-            {bench.name}
+          <Typography variant="subtitle1" noWrap title={bench.name}>
+            <b>{bench.name}</b>
           </Typography>
         }
         action={
@@ -141,6 +141,7 @@ const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
               <StyledIconButton
                 contrastColor={contrastColor}
                 color={isUserOwner ? 'currentUser' : 'neutral'}
+                title="Установить RDP соединение"
                 onClick={
                   requestRDPConnection as MouseEventHandler<HTMLButtonElement>
                 }
@@ -150,6 +151,7 @@ const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
             <StyledIconButton
               contrastColor={contrastColor}
               color={isUserOwner ? 'currentUser' : 'neutral'}
+              title="Открыть информацию и редактирование"
               onClick={editBench}
               endIcon={<Info />}
             />

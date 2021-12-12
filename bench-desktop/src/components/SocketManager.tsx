@@ -31,6 +31,10 @@ const SocketManager = ({ children }: SocketManagerProps) => {
     (state: RootState) => state.preferences.serverURI
   );
   useEffect(() => {
+    console.log(serverUri, 'changed');
+    if (subscription) {
+      subscription.disconnect();
+    }
     const s = new Subscription(serverUri);
     s.connect();
     s.on('close', () => {

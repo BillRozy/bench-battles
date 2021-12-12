@@ -49,7 +49,7 @@ const ConflictDialog = ({
             <Button
               key={it.name}
               onClick={() => subscription?.publish(getFreeBenchCmd(it.id))}
-              color="secondary"
+              color="primary"
             >
               Освободить {it.name}
             </Button>
@@ -61,7 +61,7 @@ const ConflictDialog = ({
             <Button
               key={it.name}
               onClick={() => subscription?.publish(getFreeBenchCmd(it.id))}
-              color="secondary"
+              color="primary"
             >
               Освободить {it.name}
             </Button>
@@ -71,7 +71,7 @@ const ConflictDialog = ({
       <DialogActions>
         <Button
           onClick={() => setConflict(false)}
-          color="secondary"
+          color="primary"
           variant="outlined"
         >
           Конфликт решен

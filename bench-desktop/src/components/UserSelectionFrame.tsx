@@ -1,15 +1,15 @@
-import React, { useState, forwardRef } from 'react';
+import React, { useState } from 'react';
 import { connect, useDispatch } from 'react-redux';
 import {
   Grid,
   Box,
   Fade,
-  Modal,
   Menu,
   MenuItem,
   Alert,
   AlertTitle,
 } from '@mui/material';
+import { useLocation, useHistory } from 'react-router-dom';
 import UserCard from './UserCard';
 import {
   User,
@@ -22,7 +22,6 @@ import type { RootState } from '../redux/store';
 import { selectUser } from '../redux/slices/usersSlice';
 import { selectors } from '../redux/slices/benchesSlice';
 import { requestConfirmation } from '../redux/slices/interactionsSlice';
-import UserEditForm from './UserEdit';
 import { useWebsocket } from './SocketManager';
 import { appLogger as logger } from '../log';
 
@@ -31,10 +30,9 @@ type UserSelectionProps = {
   benchOwners: number[];
 };
 
-const UserEditFormWithRef = forwardRef(UserEditForm);
-
 const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
-  const [addUserOpened, setAddUserOpened] = useState(false);
+  const location = useLocation();
+  const history = useHistory();
   const [userToEdit, setUserToEdit] = useState<User | undefined>(undefined);
   const [response, setResponse] = useState<CommandResponse | undefined>(
     undefined
@@ -45,6 +43,13 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
   ] = useState<Element | null>(null);
   const dispatch = useDispatch();
   const { subscription } = useWebsocket();
+  const goToEditUser = (): boolean => {
+    history.push({
+      pathname: `/users/new/`,
+      state: { background: location },
+    });
+    return true;
+  };
   const deleteUser = async ({ id }: { id: number }) => {
     dispatch(
       requestConfirmation({
@@ -123,10 +128,7 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
               fullwidth
               clickable
               user={{ name: 'Создать Себя!', color: '#EEE', id: 0 }}
-              onClick={() => {
-                setUserToEdit(undefined);
-                setAddUserOpened(true);
-              }}
+              onClick={goToEditUser}
             />
           </Grid>
           {response != null && (
@@ -145,23 +147,6 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
               </Alert>
             </Grid>
           )}
-          <Modal
-            open={addUserOpened}
-            aria-labelledby="modal-modal-title"
-            aria-describedby="modal-modal-description"
-            onBackdropClick={() => setAddUserOpened(false)}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <UserEditFormWithRef
-              onPositiveResult={() => setAddUserOpened(false)}
-              form={userToEdit}
-            />
-          </Modal>
-
           <Menu
             id="user-menu"
             aria-labelledby="user-button"
