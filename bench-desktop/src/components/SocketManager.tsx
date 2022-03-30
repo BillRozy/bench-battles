@@ -1,43 +1,55 @@
 import React, { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { ipcRenderer } from 'electron';
 import Subscription from '../subscription';
+import { RootState } from '../redux/store';
 
 type GeneralContext = {
   subscription: Subscription | null;
+  isConnected: boolean;
 };
 
 export const SocketContext = React.createContext<GeneralContext>({
   subscription: null,
+  isConnected: false,
 });
 // defining a useWebsocket hook for functional components
 export const useWebsocket = () => React.useContext(SocketContext);
 
 type SocketManagerProps = {
-  URI: string;
   children: JSX.Element | JSX.Element[];
 };
 
-const CONNECTION_INTERVAL = 5000;
-let connectionTimer: NodeJS.Timeout | null = null;
-
-const SocketManager = ({ URI, children }: SocketManagerProps) => {
+const SocketManager = ({ children }: SocketManagerProps) => {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const setInternetConnection = (val: boolean) => {
+    setIsConnected(val);
+    ipcRenderer.send('internet-available', JSON.stringify(val));
+  };
+  const serverUri = useSelector(
+    (state: RootState) => state.preferences.serverURI
+  );
   useEffect(() => {
-    if (connectionTimer != null) {
-      clearTimeout(connectionTimer);
+    console.log(serverUri, 'changed');
+    if (subscription) {
+      subscription.disconnect();
     }
-    const s = new Subscription(URI);
+    const s = new Subscription(serverUri);
     s.connect();
     s.on('close', () => {
-      connectionTimer = setTimeout(() => {
-        s.connect();
-      }, CONNECTION_INTERVAL);
+      setInternetConnection(false);
+    });
+    s.on('open', () => {
+      setInternetConnection(true);
     });
     setSubscription(s);
-  }, [URI]);
+  }, [serverUri]);
   return (
     <SocketContext.Provider
       value={{
         subscription,
+        isConnected,
       }}
     >
       {children}

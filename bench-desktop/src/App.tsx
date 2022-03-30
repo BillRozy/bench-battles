@@ -1,50 +1,42 @@
 import React from 'react';
-import { Container, Box } from '@material-ui/core';
+import { Container, Box } from '@mui/material';
+import { StyledEngineProvider } from '@mui/material/styles';
 import { PersistGate } from 'redux-persist/integration/react';
-import { HashRouter as Router, Switch, Route } from 'react-router-dom';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import { ThemeProvider } from '@material-ui/styles';
-import UserSelectionFrame from './components/UserSelectionFrame';
-import BenchesStateFrame from './components/BenchesStateFrame';
+import { HashRouter as Router } from 'react-router-dom';
+import CssBaseline from '@mui/material/CssBaseline';
+import DynamicThemeProvider from './components/DynamicThemeProvider';
 import SocketManager from './components/SocketManager';
-import UserRouteListener from './components/UserRouteListener';
 import { persistor } from './redux/store';
-import theme from './theme';
+import Commander from './components/Commander';
+import DialogManager from './components/DialogManager';
+import MainSwitch from './components/MainSwitch';
 
 export default function App() {
   return (
-    <SocketManager
-      URI={
-        process.env.NODE_ENV !== 'development'
-          ? 'ws://bench-combat.herokuapp.com/eventbus'
-          : 'ws://127.0.0.1:55555/eventbus'
-      }
-    >
-      <CssBaseline />
+    <StyledEngineProvider injectFirst>
       <PersistGate loading={null} persistor={persistor}>
-        <Router>
-          <ThemeProvider theme={theme}>
-            <Box bgcolor="info.dark" width="100%" height="100%">
-              <Container
-                maxWidth="lg"
-                disableGutters
-                style={{ height: '100%' }}
+        <SocketManager>
+          <Commander />
+          <Router>
+            <DynamicThemeProvider>
+              <CssBaseline />
+              <Box
+                width="100%"
+                height="100%"
+                minWidth="520px"
+                minHeight="740px"
               >
-                <UserRouteListener />
-                <Box height="100%" width="100%">
-                  <Switch>
-                    <Route path="/users" component={UserSelectionFrame} />
-                    <Route
-                      path="/benches/:userName"
-                      component={BenchesStateFrame}
-                    />
-                  </Switch>
-                </Box>
-              </Container>
-            </Box>
-          </ThemeProvider>
-        </Router>
+                <Container maxWidth="lg" disableGutters sx={{ height: '100%' }}>
+                  <Box height="100%" width="100%">
+                    <DialogManager />
+                    <MainSwitch />
+                  </Box>
+                </Container>
+              </Box>
+            </DynamicThemeProvider>
+          </Router>
+        </SocketManager>
       </PersistGate>
-    </SocketManager>
+    </StyledEngineProvider>
   );
 }

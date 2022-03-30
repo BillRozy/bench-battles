@@ -1,113 +1,139 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { User, Bench } from '../../../../common/types';
+import { createSelector } from 'reselect';
+import { ipcRenderer } from 'electron';
+import { omit, uniq, reduce } from 'lodash';
+import { Bench, BenchCacheUpdate } from '../../../../common/types';
 import { reduxLogger } from '../../log';
-import Notifications from '../../helpers/notification';
 
-type BenchesState = {
-  benches: Bench[];
+export type BenchesState = {
+  benchesIds: number[];
+  benches: { [key: number]: Bench };
 };
 
-const initialState: BenchesState = {
-  benches: [],
-};
-
-interface BenchEventPayload {
-  user: User | null;
-  benchName: string;
-}
-
-const doWithBench = (
-  state: BenchesState,
-  name: string,
-  cb: (index: number) => void
-) => {
-  const index = state.benches.findIndex((it: Bench) => it.name === name);
-  if (index === -1) {
-    reduxLogger.warn(`Bench with name == ${name} doesn't exist!`);
-  } else {
-    cb(index);
-  }
+export const initialState: BenchesState = {
+  benchesIds: [],
+  benches: {},
 };
 
 export const benchesSlice = createSlice({
   name: 'benches',
   initialState,
   reducers: {
-    addBench: (state, action) => {
+    addBench: (state: BenchesState, action: PayloadAction<Bench>) => {
       reduxLogger.info(`adding bench ${JSON.stringify(action.payload)}`);
-      state.benches.push(action.payload);
+      if (state.benchesIds.includes(action.payload.id)) {
+        reduxLogger.warn(`bench is already exists`);
+      } else {
+        state.benchesIds.push(action.payload.id);
+        state.benches = {
+          ...state.benches,
+          [action.payload.id]: action.payload,
+        };
+        ipcRenderer.send('benches-update-message', JSON.stringify(state));
+      }
     },
-    addBenches: (state, action) => {
+    removeBench: (state: BenchesState, action: PayloadAction<Bench>) => {
+      reduxLogger.info(`removing bench ${JSON.stringify(action.payload)}`);
+      if (state.benchesIds.includes(action.payload.id)) {
+        state.benches = omit(state.benches, action.payload.id);
+        state.benchesIds = state.benchesIds.filter(
+          (it) => it !== action.payload.id
+        );
+        ipcRenderer.send('benches-update-message', JSON.stringify(state));
+      } else {
+        reduxLogger.warn(`bench was not found`);
+      }
+    },
+    updateBench: (state: BenchesState, action: PayloadAction<Bench>) => {
+      reduxLogger.info(`updating bench ${JSON.stringify(action.payload)}`);
+      if (state.benchesIds.includes(action.payload.id)) {
+        state.benches[action.payload.id] = action.payload;
+        ipcRenderer.send('benches-update-message', JSON.stringify(state));
+      } else {
+        reduxLogger.warn(`bench was not found`);
+      }
+    },
+    addBenches: (state: BenchesState, action: PayloadAction<Bench[]>) => {
       reduxLogger.info(`adding benches ${JSON.stringify(action.payload)}`);
-      state.benches = [...state.benches, ...action.payload];
+      state.benchesIds = action.payload.map((it) => it.id);
+      state.benches = reduce(
+        action.payload,
+        (result: { [key: number]: Bench }, value) => {
+          result[value.id] = value;
+          return result;
+        },
+        {}
+      );
+      ipcRenderer.send('benches-update-message', JSON.stringify(state));
     },
-    changeBenchOwner: (
-      state,
-      { payload }: PayloadAction<BenchEventPayload>
+    updateBenchCache: (
+      state: BenchesState,
+      action: PayloadAction<BenchCacheUpdate>
     ) => {
-      doWithBench(state, payload.benchName, (index: number) => {
-        const bench = state.benches[index];
-        reduxLogger.info(
-          payload.user != null
-            ? `${bench.name} теперь занят ${bench.owner}.`
-            : `${bench.name} теперь занят свободен.`
-        );
-        if (payload.user != null) {
-          Notifications.BENCH_WAS_TAKEN(bench.name, payload.user.name);
-        } else {
-          Notifications.BENCH_IS_FREE(bench.name);
-        }
-        // const notification = new Notification('Bench changed owner', {
-        //   body: `changing bench ${bench.name} owner from ${bench.owner} to ${payload.user}`,
-        //   icon: 'ico/favicon.ico',
-        // });
-        // using Immer under the hood!
-        state.benches[index].owner = payload.user ? payload.user.name : null;
-      });
-    },
-    addUserToBenchLine: (
-      state,
-      { payload }: PayloadAction<BenchEventPayload>
-    ) => {
-      doWithBench(state, payload.benchName, (index: number) => {
-        if (payload.user == null) {
-          return;
-        }
-        const bench = state.benches[index];
-        reduxLogger.info(
-          `adding user ${payload.user} to line for ${bench.name}`
-        );
-        // using Immer under the hood!
-        state.benches[index].line.push(payload.user.name);
-      });
-    },
-    removeUserFromBenchLine: (
-      state,
-      { payload }: PayloadAction<BenchEventPayload>
-    ) => {
-      doWithBench(state, payload.benchName, (index: number) => {
-        if (payload.user == null) {
-          return;
-        }
-        const bench = state.benches[index];
-        reduxLogger.info(
-          `removing user ${payload.user.name} from line for ${bench.name}`
-        );
-        // using Immer under the hood!
-        state.benches[index].line = state.benches[index].line.filter(
-          (username) => payload.user && username !== payload.user.name
-        );
-      });
+      const oldCache = state.benches[action.payload.id] as Bench;
+      if (!oldCache) {
+        reduxLogger.warn(`${action.payload.id} не найден!`);
+        return;
+      }
+      state.benches[action.payload.id] = {
+        ...state.benches[action.payload.id],
+        ...action.payload,
+      };
+      ipcRenderer.send('benches-update-message', JSON.stringify(state));
     },
   },
 });
 
+export const selectors = {
+  getPendingBenches: createSelector(
+    [(state: BenchesState) => state.benches],
+
+    (benches) => {
+      return Object.values(benches).filter((it) => it.pending);
+    }
+  ),
+  getOwnedBenches: createSelector(
+    [(state: BenchesState) => state.benches],
+
+    (benches) => {
+      return Object.values(benches).filter((it) => it.owner != null);
+    }
+  ),
+  getOwnersOfBenches: createSelector(
+    [(state: BenchesState) => state.benches],
+
+    (benches) => {
+      return Object.values(benches)
+        .filter((it) => it.owner != null)
+        .map((it) => it.owner || 0);
+    }
+  ),
+  getAvailableBuilds: createSelector(
+    [(state: BenchesState) => state.benches],
+
+    (benches) => {
+      return uniq(
+        Object.values(benches).map((bench) => bench.build || 'unknown')
+      );
+    }
+  ),
+  getAvailableSwVers: createSelector(
+    [(state: BenchesState) => state.benches],
+
+    (benches) => {
+      return uniq(
+        Object.values(benches).map((bench) => bench.swVer || 'unknown')
+      );
+    }
+  ),
+};
+
 export const {
-  addBench,
   addBenches,
-  changeBenchOwner,
-  addUserToBenchLine,
-  removeUserFromBenchLine,
+  updateBenchCache,
+  addBench,
+  removeBench,
+  updateBench,
 } = benchesSlice.actions;
 
 export default benchesSlice.reducer;

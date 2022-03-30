@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Version {
+  id             Int           @id(map: "Versions_pkey") @default(autoincrement())
+  version        Int
+}
+
+model Bench {
+  name           String
+  id             Int           @id(map: "Benches_pkey") @default(autoincrement())
+  ip             String?
+  stid           String?
+  build          String?
+  swVer          String?
+  voiceControl   Boolean?
+  gsimCredId     Int?
+  gsimCredentials GsimCredential? @relation(fields: [gsimCredId], references: [id], onUpdate: NoAction, map: "gsimConstraint")
+
+  @@index([gsimCredId], map: "fki_gsimConstraint")
+}
+
+model GsimCredential {
+  id       Int      @id(map: "GsimCreds_pkey") @default(autoincrement())
+  username String
+  password String
+  bench    Bench[]
+}
+
+model User {
+  name  String
+  color String?
+  id    Int      @id(map: "Users_pkey") @default(autoincrement())
+}

@@ -136,6 +136,13 @@ export default class MenuBuilder {
             this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
           },
         },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'Alt+Command+I',
+          click: () => {
+            this.mainWindow.webContents.toggleDevTools();
+          },
+        },
       ],
     };
     const subMenuWindow: DarwinMenuItemConstructorOptions = {
@@ -193,6 +200,7 @@ export default class MenuBuilder {
   }
 
   buildDefaultTemplate() {
+    const sender = this.mainWindow?.webContents;
     const templateDefault = [
       {
         label: '&File',
@@ -239,6 +247,12 @@ export default class MenuBuilder {
                     this.mainWindow.webContents.toggleDevTools();
                   },
                 },
+                {
+                  label: 'Локальный сервер',
+                  click() {
+                    sender.send('switch-to-localhost', true);
+                  },
+                },
               ]
             : [
                 {
@@ -248,6 +262,13 @@ export default class MenuBuilder {
                     this.mainWindow.setFullScreen(
                       !this.mainWindow.isFullScreen()
                     );
+                  },
+                },
+                {
+                  label: 'Toggle &Developer Tools',
+                  accelerator: 'Alt+Ctrl+I',
+                  click: () => {
+                    this.mainWindow.webContents.toggleDevTools();
                   },
                 },
               ],
@@ -279,6 +300,23 @@ export default class MenuBuilder {
             label: 'Search Issues',
             click() {
               shell.openExternal('https://github.com/electron/electron/issues');
+            },
+          },
+        ],
+      },
+      {
+        label: 'Сервер',
+        submenu: [
+          {
+            label: 'Основной',
+            click() {
+              sender.send('switch-to-beta', false);
+            },
+          },
+          {
+            label: 'Бета',
+            click() {
+              sender.send('switch-to-beta', true);
             },
           },
         ],

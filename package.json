@@ -2,5 +2,8 @@
   "scripts": {
     "install": "cd bench-backend && npm install",
     "start": "cd bench-backend && npm start"
+  },
+  "dependencies": {
+    "socket.io": "^4.2.0"
   }
 }

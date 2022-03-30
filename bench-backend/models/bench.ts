@@ -1,78 +1,208 @@
-import EventEmitter from 'events';
 import Line from './line';
-import UserModel from './user';
-import { BenchEvent, BenchInfo, EventType, Bench } from '../../common/types';
+import { BenchPersistent, BenchCache, BenchCacheUpdate, BenchCacheUpdateEvent, Entity,
+  EventType, Bench, BenchMSD } from '../../common/types';
+import logger from '../logger';
+import { IModel } from './index'
+import { EventEmitter } from 'events';
 
-export default class BenchModel extends EventEmitter {
-  private name: string;
-  private info: BenchInfo;
-  private line: Line;
-  private _owner: UserModel | null;
-  constructor(name: string, info: BenchInfo) {
+const PENDING_MAX_TIME = 15 * 60 * 1000;
+const PENDING_INTERVAL = 1000;
+const OWNED_INTERVAL = 1000;
+
+type MinBenchUpdate = Omit<BenchCacheUpdate, 'id' | 'name'>;
+
+export default class BenchModel extends EventEmitter implements IModel<BenchPersistent, Bench> {
+  private _pendingTimerId: NodeJS.Timeout | null = null;
+  private _ownedTimerId: NodeJS.Timeout | null = null;
+  private _info: BenchPersistent;
+  private _cache: BenchCache;
+  id: number;
+
+  constructor(benchInfo: BenchPersistent, cachePart: BenchCache) {
     super();
-    this.name = name;
-    this.info = info;
-    this.line = new Line();
-    this._owner = null;
+    this.id = benchInfo.id;
+    this._info = benchInfo;
+    this._cache = cachePart;
+    this.pending = this._cache.pending;
+    this.owner = this._cache.owner;
   }
 
-  get owner() : UserModel | null {
-    return this._owner;
+  getId() : number {
+    return this.id;
   }
 
-  set owner(user: UserModel | null) {
+  get line() {
+    return new Line(this._cache.line);
+  }
+
+  set pending (value: boolean) {
+    if (value) {
+      this._pendingTimerId = setInterval(this.handlePendingTimeChange.bind(this), PENDING_INTERVAL);
+      this.updateCache( {
+        pending: value,
+      });
+    } else {
+      this._pendingTimerId != null && clearInterval(this._pendingTimerId);
+      if (value !== this._cache.pending || this._cache.pendingTimeLeft !== PENDING_MAX_TIME) {
+        this.updateCache( {
+          pending: value,
+          pendingTimeLeft: PENDING_MAX_TIME
+        });
+      }
+    }
+  }
+
+  get pending (): boolean {
+    return this._cache.pending;
+  }
+
+  set maintenance (value: boolean) {
+    this.updateCache( {
+      maintenance: value,
+    });
+  }
+
+  get maintenance () : boolean {
+    return this._cache.maintenance;
+  }
+
+  get name() : string {
+    return this._info.name;
+  }
+
+  get owner() : number | null {
+    return this._cache.owner;
+  }
+
+  set owner(user: number | null) {
+    logger.info(`Bench ${this.name} is taken by user with id: ${user}`);
     if (user == null) {
-      this._owner = this.line.nextUser() || null;
+      this._ownedTimerId != null && clearInterval(this._ownedTimerId);
+      this._ownedTimerId = null;
+      this.updateCache( {
+        ownedTime: 0
+      });
     } else {
-      this._owner = user;
+      if (this._ownedTimerId == null) {
+        this._ownedTimerId = setInterval(this.handleOwnedTimeChange.bind(this), OWNED_INTERVAL);
+      }
     }
-    console.log(`Bench ${this.name} is taken by: ${this._owner && this._owner.name}`);
-    this.emitEvent(EventType.NEW_OWNER, this._owner);
+    this.updateCache( {
+      owner: user,
+    });
   }
 
-  emitEvent(eventType: EventType, user: UserModel | null = null) {
-    this.emit(eventType, {
-      event: eventType,
-      benchName: this.name,
-      userName: user != null ? user.name : null,
-    } as BenchEvent);
+  update(persUpdate: BenchPersistent) : BenchModel {
+    this._info = persUpdate;
+    return this;
   }
 
-  requestBench(user : UserModel) {
+  updateCache (update: MinBenchUpdate | BenchCacheUpdate) {
+    this._cache = Object.assign<BenchCache, MinBenchUpdate>(this._cache, update);
+    this.emitCacheUpdate({
+      ...{
+        id: this._cache.id,
+      } as BenchMSD,
+      ...update,
+    } as BenchCacheUpdate);
+  }
+
+  emitCacheUpdate(cache: BenchCacheUpdate) {
+    this.emit(EventType.ENTITY_CACHE_UPDATE, {
+      event: EventType.ENTITY_CACHE_UPDATE,
+      entity: Entity.BENCH,
+      cache
+    } as BenchCacheUpdateEvent);
+  }
+
+  handlePendingTimeChange () {
+    let timeUpdate = this._cache.pendingTimeLeft - PENDING_INTERVAL;
+    if (timeUpdate <= 0) {
+      this.owner != null && this.freeBench(this.owner)
+    }
+    this.updateCache( {
+      pendingTimeLeft: timeUpdate
+    });
+  }
+
+  handleOwnedTimeChange () {
+    let timeUpdate = this._cache.ownedTime + OWNED_INTERVAL;
+    this.updateCache( {
+      ownedTime: timeUpdate
+    });
+  }
+
+  requestBench(user : number) {
     if (user === this.owner) {
-      console.log(`Bench ${this.name} is already taken by: ${user.name}`);
-      return;
+      if (this.pending) {
+        this.pending = false;
+        logger.info(`Bench ${this.name} is taken by: ${user} and confirmed.`);
+      } else {
+        logger.info(`Bench ${this.name} is already taken by: ${user}`);
+      }
     }
-    if (this.line.hasUser(user)) {
-      console.log(`User ${user.name} is already in line for bench ${this.name}`);
-      return;
+    else if (this.line.hasUser(user)) {
+      logger.warn(`User ${user} is already in line for bench ${this.name}`);
     }
-    if (this.owner == null) {
-      this.owner = this.line.size === 0 ? user : this.line.nextUser() || null;
-    } else {
-      this.line.addUser(user);
-      this.emitEvent(EventType.NEW_USER_IN_LINE, user);
+    else {
+      if (this.owner == null) {
+        this.owner = user;
+      } else {
+        const newLine = this.line.addUser(user);
+        this.updateCache({
+          line: newLine
+        });
+      }
     }
   }
 
-  freeBench(user : UserModel) {
+  freeBench(user : number) {
     if (user === this.owner) {
-      console.log(`Bench ${this.name} was leaved by: ${user.name}`);
+      if (this.pending) {
+        logger.info(`Bench ${this.name} was taken by: ${user} but not confirmed and declined.`);
+        this.pending = false
+      } else {
+        logger.info(`Bench ${this.name} was leaved by: ${user}`);
+      }
       this.owner = null;
+      if (this.line.hasNextUser()) {
+        this.owner = this._seekNewOwner();
+      }
     }
     if (this.line.hasUser(user)) {
-      console.log(`User ${user.name} leaved line for bench ${this.name}`);
-      this.line.removeUser(user);
-      this.emitEvent(EventType.REMOVED_USER_FROM_LINE, user);
+      logger.info(`User ${user} leaved line for bench ${this.name}`);
+      const newLine = this.line.removeUser(user);
+      this.updateCache({
+        line: newLine
+      });
     }
+  }
+
+  _seekNewOwner() : number | null {
+    let [ newOwner, newLine ] = this.line.popNextUser();
+    if (newOwner) {
+      this.pending = true;
+      this.updateCache({
+        line: newLine
+      });
+      logger.info(`User ${newOwner} leaved line for bench ${this.name}`);
+    }
+    return newOwner;
   }
 
   toJSON() : Bench {
     return {
-      name: this.name,
-      line: this.line.serialize(),
-      info: this.info,
-      owner: this._owner != null ? this._owner.serialize() : null,
+      ...this._cache,
+      ...this._info
     } as Bench;
+  }
+
+  stopAllActions() {
+    if (this._pendingTimerId) {
+      clearTimeout(this._pendingTimerId);
+    }
+    if (this._ownedTimerId) {
+      clearTimeout(this._ownedTimerId);
+    }
   }
 }

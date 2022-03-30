@@ -20,5 +20,6 @@
     "resolveJsonModule": true,
     "allowJs": true,
     "types": ["node"],
+    "experimentalDecorators": true
   }
 }

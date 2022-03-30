@@ -1,1 +1,11 @@
 node_modules
+# Keep environment variables out of version control
+.env
+
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+.pnp.*

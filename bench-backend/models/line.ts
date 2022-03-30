@@ -1,40 +1,39 @@
-import UserModel from './user';
-import { User } from '../../common/types';
-
 export default class Line {
-  private users: UserModel[];
-  constructor() {
-    this.users = [];
+  private users: number[];
+  constructor(usersIds: number[] = []) {
+    this.users = usersIds;
   }
 
   get size() {
     return this.users.length;
   }
 
-  addUser(user: UserModel) {
-    this.users.push(user);
-  }
-
-  hasUser(user: UserModel) : boolean{
-    return this.users.includes(user);
-  }
-
-  removeUser(user: UserModel) {
-    this.users = this.users.filter(it => user != it);
-  }
-
-  nextUser() : UserModel | null | undefined {
-    if (this.users.length > 0) {
-      return this.users.shift();
+  addUser(id: number) : number[] {
+    if (!this.users.includes(id)) {
+      this.users.push(id);
     }
-    return null;
+    return this.users;
   }
 
-  toJSON() : User[] {
-    return this.users.map(user => user.toJSON());
+  hasUser(userId: number) : boolean{
+    return this.users.includes(userId);
   }
 
-  serialize() : string[] {
-    return this.users.map(user => user.serialize());
+  removeUser(userId: number) : number[] {
+    this.users = this.users.filter(it => userId != it);
+    return this.users;
+  }
+
+  hasNextUser() : boolean {
+    return this.users.length > 0;
+  }
+
+  popNextUser() : [ number | null, number[] ] {
+    const user = this.users.shift() || null;
+    return [ user, this.users ];
+  }
+
+  serialize() : number[] {
+    return this.users;
   }
 }

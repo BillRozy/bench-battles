@@ -1,159 +1,223 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { makeStyles, createStyles } from '@material-ui/core/styles';
-import { Grid, Box, Slide, Paper } from '@material-ui/core';
-import { fade } from '@material-ui/core/styles/colorManipulator';
-import { grey } from '@material-ui/core/colors';
-import TopNavigationPanel from './TopNavigationPanel';
+import { alpha, useTheme, styled } from '@mui/material/styles';
+import { Grid, Box, Slide, Paper, Badge, Typography } from '@mui/material';
+import { filter, uniq, xor, intersection } from 'lodash';
+import { grey } from '@mui/material/colors';
 import { User, Bench } from '../../../common/types';
 import type { RootState } from '../redux/store';
-import UserCard from './UserCard';
 import BenchCard from './BenchCard';
 import CrownIcon from '../img/Simple_gold_crown.png';
-
-const useStyles = makeStyles((theme) =>
-  createStyles({
-    root: {
-      height: '100%',
-      justifyContent: 'space-between',
-    },
-    divider: {
-      margin: 0,
-    },
-    growingGrid: {
-      flexGrow: 11,
-    },
-    paper: {
-      flexGrow: 11,
-      marginTop: theme.spacing(2),
-      background: fade(grey[50], 0.05),
-    },
-    paperGrid: {
-      height: '100%',
-    },
-  })
-);
+import MaintenanceIcon from '../img/maintenance-rotatable-icon.png';
+import FilterableTagsList from './utility/FilterableTagsList';
 
 interface IBenchesStateProps {
-  currentUser: User | null;
-  users: User[];
-  benches: Bench[];
+  benches: { [key: number]: Bench };
+  benchesIds: number[];
 }
 
 type BenchCardGridWrapProps = {
   bench: Bench;
-  isCurrentUser: boolean;
+  currentUser: User | null;
 };
 
-const useInnerStyles = makeStyles(() =>
-  createStyles({
-    benchCard: {
-      transition: '0.25s',
-    },
-  })
+const BenchCardGridWrap = connect((state: RootState) => ({
+  currentUser: state.users.currentUser,
+}))(
+  styled(({ bench, currentUser }: BenchCardGridWrapProps) => {
+    return (
+      <Grid item>
+        <Box
+          sx={{
+            transition: '0.25s',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          {currentUser?.id === bench.owner && (
+            <Box
+              padding="0.5em"
+              component="img"
+              height="4em"
+              width="auto"
+              src={CrownIcon}
+              alt="crown"
+            />
+          )}
+          {bench.maintenance && (
+            <Box
+              padding="0.5em"
+              component="img"
+              height="4em"
+              width="auto"
+              src={MaintenanceIcon}
+              alt="maintenance"
+            />
+          )}
+          <Badge badgeContent={bench.build} max={1000} color="error">
+            <BenchCard bench={bench} />
+          </Badge>
+        </Box>
+      </Grid>
+    );
+  })(() => ({}))
 );
 
-const BenchCardGridWrap = ({
-  bench,
-  isCurrentUser,
-}: BenchCardGridWrapProps) => {
-  const classes = useInnerStyles({ isCurrentUser, bench });
-  return (
-    <Grid item>
-      <Box
-        className={classes.benchCard}
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-      >
-        {isCurrentUser && (
-          <Box clone height="64px" width="auto">
-            <img src={CrownIcon} alt="crown" />
-          </Box>
-        )}
-        <BenchCard bench={bench} />
-      </Box>
-    </Grid>
+const BenchesStateFrame = ({ benches, benchesIds }: IBenchesStateProps) => {
+  const theme = useTheme();
+  const [builds, setBuilds] = useState<string[]>(
+    uniq(Object.values(benches).map((bench) => bench.build || 'unknown'))
   );
-};
+  const [swVers, setSwVers] = useState<string[]>(
+    uniq(Object.values(benches).map((bench) => bench.swVer || 'unknown'))
+  );
+  const [selectedBuildsList, setSelectedBuilds] = useState<string[]>(builds);
+  const [selectedSwVerList, setSelectedSwVer] = useState<string[]>(swVers);
 
-const BenchesStateFrame = ({
-  benches,
-  users,
-  currentUser,
-}: IBenchesStateProps) => {
-  const classes = useStyles();
-  if (currentUser == null) {
-    return (
-      <section>
-        <Link to="/">Back</Link>
-      </section>
+  useEffect(() => {
+    const newBuildsList = uniq(
+      Object.values(benches).map((bench) => bench.build || 'unknown')
     );
-  }
+    const newSwVersList = uniq(
+      Object.values(benches).map((bench) => bench.swVer || 'unknown')
+    );
+    if (xor(builds, newBuildsList).length > 0) {
+      setBuilds(newBuildsList);
+    }
+    if (xor(swVers, newSwVersList).length > 0) {
+      setSwVers(newSwVersList);
+    }
+  }, [benches]);
 
-  let freeUsers: User[] = [...users];
-  benches.forEach(({ line, owner }) => {
-    freeUsers = freeUsers.filter(
-      (it) => !line.includes(it.name) && it.name !== owner
-    );
+  useEffect(() => {
+    setSelectedSwVer(intersection(swVers, selectedSwVerList));
+  }, [swVers]);
+
+  useEffect(() => {
+    setSelectedBuilds(intersection(builds, selectedBuildsList));
+  }, [builds]);
+
+  const filteredBenchCardsByBuild = filter(
+    benches,
+    (it) => it.build == null || selectedBuildsList.includes(it.build)
+  );
+  const filteredSwVers = uniq(
+    filteredBenchCardsByBuild.map((it) => it.swVer || 'unknown')
+  );
+  const filteredBenchCardsBySwVer = filter(
+    filteredBenchCardsByBuild,
+    (it) =>
+      it.swVer == null ||
+      (selectedSwVerList.includes(it.swVer) &&
+        filteredSwVers.includes(it.swVer))
+  );
+
+  const isBenchCardVisible = (bench: Bench) => {
+    return filteredBenchCardsBySwVer.includes(bench);
+  };
+
+  const benchComponents = benchesIds.map((it) => {
+    const bench = benches[it];
+    return isBenchCardVisible(bench) ? (
+      <BenchCardGridWrap bench={benches[it]} key={it} />
+    ) : null;
   });
+
   return (
-    <Grid container direction="column" className={classes.root}>
+    <Grid
+      container
+      direction="column"
+      sx={{
+        height: '100%',
+        justifyContent: 'flex-start',
+      }}
+    >
+      {builds.length > 0 && (
+        <Slide in direction="down" timeout={1000}>
+          <Box>
+            <Typography
+              variant="subtitle1"
+              align="center"
+              gutterBottom
+              color="white"
+            >
+              Отфильтруй по каденсу!
+            </Typography>
+            <FilterableTagsList
+              items={builds}
+              selectedItems={selectedBuildsList}
+              onSelectedListUpdate={setSelectedBuilds}
+            />
+          </Box>
+        </Slide>
+      )}
+      {filteredSwVers.length > 0 && (
+        <Slide in direction="down" timeout={1000}>
+          <Box>
+            <Typography
+              variant="subtitle1"
+              align="center"
+              gutterBottom
+              color="white"
+            >
+              Отфильтруй по билду!
+            </Typography>
+            <FilterableTagsList
+              items={filteredSwVers}
+              selectedItems={selectedSwVerList}
+              onSelectedListUpdate={setSelectedSwVer}
+            />
+          </Box>
+        </Slide>
+      )}
       <Slide in direction="down" timeout={1000}>
-        <Box>
-          <TopNavigationPanel />
-        </Box>
+        <Typography
+          sx={{ marginTop: theme.spacing(2) }}
+          variant="subtitle1"
+          align="center"
+          color="white"
+          gutterBottom
+        >
+          {' '}
+          А теперь займи свободный бенч или встань в очередь!
+        </Typography>
       </Slide>
       <Slide in direction="down" timeout={1000}>
-        <Paper className={classes.paper}>
+        <Paper
+          sx={{
+            flex: '1 400px',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: theme.spacing(2),
+            background: alpha(grey[50], 0.05),
+            minHeight: '400px',
+            overflow: 'auto',
+          }}
+        >
           <Grid
             container
             spacing={1}
-            justify="space-evenly"
+            justifyContent="space-evenly"
             alignItems="center"
-            className={classes.paperGrid}
+            sx={{
+              flexBasis: '400px',
+              flexGrow: 1,
+              minHeight: '100%',
+            }}
           >
-            {benches.map((it) => {
-              const isCurrentUser = currentUser.name === it.owner;
-              return (
-                <BenchCardGridWrap
-                  bench={it}
-                  isCurrentUser={isCurrentUser}
-                  key={it.name}
-                />
-              );
-            })}
+            {benchComponents}
           </Grid>
         </Paper>
       </Slide>
-      {/* <Divider light classes={{ root: classes.divider }} /> */}
-      <Box flexGrow={1} clone maxHeight="120px">
-        <Slide direction="up" in timeout={500}>
-          <Grid container spacing={1} justify="center" alignItems="center">
-            {freeUsers.map((it) => {
-              if (it.name === currentUser.name) return null;
-              return (
-                <Grid item key={it.name}>
-                  <UserCard
-                    user={it}
-                    key={it.name}
-                    currentUser={currentUser.name === it.name}
-                  />
-                </Grid>
-              );
-            })}
-          </Grid>
-        </Slide>
-      </Box>
     </Grid>
   );
 };
 const mapStateToProps = (state: RootState) => {
   return {
     users: state.users.all,
-    currentUser: state.users.currentUser,
     benches: state.benches.benches,
+    benchesIds: state.benches.benchesIds,
   };
 };
 

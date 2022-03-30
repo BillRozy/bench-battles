@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "bench-backend"
+		},
+		{
+			"path": "common"
+		}
+	],
+	"settings": {}
+}
