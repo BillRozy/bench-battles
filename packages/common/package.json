@@ -1,0 +1,9 @@
+{
+  "name": "common",
+  "packageManager": "yarn@3.2.0",
+  "private": true,
+  "main": "dist/index.js",
+  "installConfig": {
+    "selfReferences": false
+  }
+}

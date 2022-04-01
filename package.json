@@ -1,9 +1,28 @@
 {
-  "scripts": {
-    "install": "cd bench-backend && npm install",
-    "start": "cd bench-backend && npm start"
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
   },
-  "dependencies": {
-    "socket.io": "^4.2.0"
+  "name": "bench-battles",
+  "version": "1.0.0",
+  "repository": "https://github.com/BillRozy/bench-battles.git",
+  "author": "BillRozy <squee1994@gmail.com>",
+  "license": "MIT",
+  "packageManager": "yarn@3.2.0",
+  "scripts": {
+    "build": "yarn workspace backend build",
+    "install-backend": "yarn workspaces focus backend",
+    "start": "yarn workspace backend start",
+    "stop": "yarn workspace backend stop"
+  },
+  "engines": {
+    "node": ">=14.x",
+    "npm": ">=6.x",
+    "yarn": ">=3.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.4.3"
   }
 }

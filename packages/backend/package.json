@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "private": true,
+  "name": "backend",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^3.0.2",
+    "common": "workspace:*",
+    "express": "^4.17.1",
+    "express-pino-logger": "^6.0.0",
+    "express-ws": "^4.0.0",
+    "localenv": "^0.2.2",
+    "pino": "next",
+    "pino-pretty": "^7.0.0",
+    "pm2": "^5.2.0",
+    "redis": "next",
+    "rxjs": "^7.3.0",
+    "socket.io": "^4.2.0",
+    "yup": "^0.32.9"
+  },
+  "scripts": {
+    "dev": "yarn nodemon app.ts",
+    "start2": "node ./dist/app.js",
+    "start": "pm2 start ./dist/app.js --name server --no-daemon",
+    "stop": "pm2 stop server",
+    "build": "yarn tsc --build .",
+    "postinstall": "yarn generate-prisma",
+    "generate-prisma": "prisma generate",
+    "reset-db": "prisma migrate reset",
+    "seed-db": "ts-node prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.11",
+    "@types/express-pino-logger": "^4.0.2",
+    "@types/express-ws": "^3.0.0",
+    "@types/lodash": "^4.14.173",
+    "@types/node": "^14.14.31",
+    "@types/redis": "^2.8.28",
+    "@types/ws": "^7.4.0",
+    "@typescript-eslint/eslint-plugin": "^4.16.1",
+    "@typescript-eslint/parser": "^4.0.0",
+    "eslint": "^7.21.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "nodemon": "^2.0.7",
+    "prisma": "^3.0.2",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.3"
+  },
+  "prisma": {
+    "seed": "yarn ts-node prisma/seed.ts"
+  },
+  "installConfig": {
+    "selfReferences": false
+  }
+}
