@@ -2,33 +2,13 @@ import { EventEmitter } from 'events';
 import { io, Socket } from 'socket.io-client';
 import { BenchCommand, Command, CommandResponse } from 'common';
 import { appLogger } from '../log';
-import { ErrorType } from 'typescript-logging';
-import { wsEventHandler } from './message-handler';
+import wsEventHandler from './message-handler';
+import Looper, { IterableSubscription } from './looper';
 
-
-export class Looper {
-  private subscription: Subscription;
-  private handler: (arg: any) => any;
-
-  constructor(subscription: Subscription, handler: (arg: any) => any) {
-    this.subscription = subscription;
-    this.handler = handler;
-  }
-  async start() {
-    for await (const event of this.subscription) {
-      try {
-        this.handler(event);
-      } catch (err) {
-        appLogger.error(
-          `Message from websocket is not JSON: ${event}`,
-          err as ErrorType
-        );
-      }
-    }
-  }
-}
-
-export default class Subscription extends EventEmitter {
+export default class Subscription
+  extends EventEmitter
+  implements IterableSubscription
+{
   private URI: string;
 
   private websocket: Socket | null = null;
@@ -48,26 +28,24 @@ export default class Subscription extends EventEmitter {
     this.looper.start();
   }
 
-  _addEvent(event: Event) {
+  addEvent(event: Event) {
     if (this.resolvers.length > 0) {
-      const resolver = this.resolvers.shift();
-      resolver && resolver(event);
+      this.resolvers.shift()?.(event);
     } else {
       this.events.push(event);
     }
   }
 
-  _takeEvent() {
+  takeEvent() {
     if (this.events.length > 0) {
       const event = this.events.shift();
       if (!event) {
-        return Promise.reject(new Error('Empty event!'))
+        return Promise.reject(new Error('Empty event!'));
       }
       return Promise.resolve<Event>(event);
     }
     return new Promise<Event>((resolve) => {
       this.resolvers.push(resolve);
-
     });
   }
 
@@ -75,8 +53,12 @@ export default class Subscription extends EventEmitter {
     return this;
   }
 
-  next() {
-    return this._takeEvent().then(val => ({ value: val, done: false}));
+  async next() {
+    const event = await this.takeEvent();
+    return {
+      value: event,
+      done: false,
+    } as IteratorResult<Event>;
   }
 
   set isConnected(val: boolean) {
@@ -95,29 +77,31 @@ export default class Subscription extends EventEmitter {
     return !!this.connected;
   }
 
+  get ioURI() {
+    return `${this.URI}`;
+  }
+
   disconnect() {
     this.websocket?.disconnect();
   }
 
   connect() {
     this.websocket?.disconnect();
-    this.websocket = io(this.URI, {
-      transports: ['websocket'],
-    });
+    this.websocket = io(this.ioURI);
     this.websocket.on('connect', () => {
-      appLogger.info(`Opened subscription to: ${this.URI}`);
+      appLogger.info(`Opened subscription to: ${this.ioURI}`);
       this.isConnected = true;
     });
     this.websocket.on('event', (data) => {
-      this._addEvent(data);
+      this.addEvent(data);
     });
     this.websocket.on('disconnect', () => {
       this.isConnected = false;
-      appLogger.info(`Close subscription to: ${this.URI}`);
+      appLogger.info(`Close subscription to: ${this.ioURI}`);
     });
     this.websocket.on('connect_error', (error) => {
       this.isConnected = false;
-      appLogger.error(`Error in to: ${this.URI}`, new Error(error.message));
+      appLogger.error(`Error in connection to: ${this.ioURI}`, error);
     });
   }
 

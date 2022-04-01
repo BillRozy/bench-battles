@@ -1,4 +1,17 @@
 import {
+  EntityCacheUpdateEvent,
+  Event,
+  BenchesSubEvent,
+  Entity,
+  EventType,
+  BenchCacheUpdate,
+  CrudEvent,
+  CrudEntityEvent,
+  WithID,
+  User,
+  Bench,
+} from 'common';
+import {
   addBenches,
   updateBenchCache,
   addBench,
@@ -13,19 +26,6 @@ import {
 } from '../redux/slices/usersSlice';
 import { setDbVersion } from '../redux/slices/preferencesSlice';
 import store from '../redux/store';
-import {
-  EntityCacheUpdateEvent,
-  Event,
-  BenchesSubEvent,
-  Entity,
-  EventType,
-  BenchCacheUpdate,
-  CrudEvent,
-  CrudEntityEvent,
-  WithID,
-  User,
-  Bench,
-} from 'common';
 
 import { appLogger } from '../log';
 
@@ -46,7 +46,21 @@ const CRUD_MAPPING = {
   },
 };
 
-export const wsEventHandler = (json: Event) => {
+const handleEntityUpdate = (json: EntityCacheUpdateEvent) => {
+  // appLogger.debug(
+  //   `${this.constructor.name} v${this.ver}: handleEntityUpdate`
+  // );
+  const { entity, cache } = json;
+  switch (entity) {
+    case Entity.BENCH:
+      store.dispatch(updateBenchCache(cache as BenchCacheUpdate));
+      break;
+    default:
+      appLogger.warn(`Unknown entity '${entity}' update`);
+  }
+};
+
+export default (json: Event) => {
   // appLogger.debug(
   //   `${this.constructor.name} v${this.ver}: got message - ${JSON.stringify(
   //     json
@@ -74,18 +88,4 @@ export const wsEventHandler = (json: Event) => {
     default:
       break;
   }
-}
-
-const handleEntityUpdate = (json: EntityCacheUpdateEvent) => {
-  // appLogger.debug(
-  //   `${this.constructor.name} v${this.ver}: handleEntityUpdate`
-  // );
-  const { entity, cache } = json;
-  switch (entity) {
-    case Entity.BENCH:
-      store.dispatch(updateBenchCache(cache as BenchCacheUpdate));
-      break;
-    default:
-      appLogger.warn(`Unknown entity '${entity}' update`);
-  }
-}
+};

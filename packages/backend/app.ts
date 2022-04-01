@@ -14,9 +14,7 @@ import createCRUD from './crud';
 
 const prisma = new PrismaClient();
 const crud = createCRUD(prisma);
-const io = new Server({
-  transports: ['websocket'],
-});
+const io = new Server();
 
 const eventsMapping = {
   [CrudCommand.CREATE_ENTITY]: CrudEntityEvent.ENTITY_CREATED,
@@ -90,9 +88,9 @@ async function main() {
     })
   });
 
-
-  io.listen(parseInt(process.env.PORT || '55555'));
-  logger.info(`Listening`);
+  const port = parseInt(process.env.PORT || '55555');
+  io.listen(port);
+  logger.info(`Listening ${port}`);
 }
 
 main().catch((e) => {

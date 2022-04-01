@@ -19,13 +19,15 @@
     "yup": "^0.32.9"
   },
   "scripts": {
-    "dev": "nodemon app.ts",
+    "dev": "yarn nodemon app.ts",
     "start2": "node ./dist/app.js",
     "start": "pm2 start ./dist/app.js --name server --no-daemon",
     "stop": "pm2 stop server",
     "build": "yarn tsc --build .",
     "postinstall": "yarn generate-prisma",
-    "generate-prisma": "prisma generate"
+    "generate-prisma": "prisma generate",
+    "reset-db": "prisma migrate reset",
+    "seed-db": "ts-node prisma/seed.ts"
   },
   "devDependencies": {
     "@types/express": "^4.17.11",
