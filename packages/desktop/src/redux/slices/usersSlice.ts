@@ -2,15 +2,13 @@ import { CaseReducer, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ipcRenderer } from 'electron';
 import { mapValues } from 'lodash';
 import { persistReducer } from 'redux-persist';
-import createElectronStorage from 'redux-persist-electron-storage';
+import storage from 'redux-persist/lib/storage';
 import { User } from 'common';
 import { reduxLogger } from '../../log';
 
 type CustomCaseReducerWithPrepare<T> = {
   reducer: CaseReducer<UsersState, PayloadAction<T>>;
-  prepare: (
-    arg: T
-  ) => {
+  prepare: (arg: T) => {
     payload: T;
   };
 };
@@ -119,17 +117,12 @@ export const usersSlice = createSlice({
   },
 });
 
-export const {
-  addUsers,
-  selectUser,
-  addUser,
-  removeUser,
-  updateUser,
-} = usersSlice.actions;
+export const { addUsers, selectUser, addUser, removeUser, updateUser } =
+  usersSlice.actions;
 
 const persistConfig = {
   key: 'root',
-  storage: createElectronStorage(),
+  storage,
   whitelist: ['currentUser'],
   blacklist: [],
 };

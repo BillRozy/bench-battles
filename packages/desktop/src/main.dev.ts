@@ -12,8 +12,11 @@ import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import path from 'path';
 import { app, BrowserWindow, shell, session } from 'electron';
+import * as remoteMain from '@electron/remote/main';
 import registerTrayToMainWindow from './helpers/tray';
 import MenuBuilder from './menu';
+
+remoteMain.initialize();
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -63,11 +66,12 @@ const createWindow = async () => {
     icon: getAssetPath('icon.png'),
     webPreferences: {
       nodeIntegration: true,
-      enableRemoteModule: true,
       nodeIntegrationInWorker: true,
       contextIsolation: false,
     },
   });
+
+  remoteMain.enable(mainWindow.webContents);
 
   const menuBuilder = new MenuBuilder(mainWindow);
   app.applicationMenu = menuBuilder.buildMenu();
