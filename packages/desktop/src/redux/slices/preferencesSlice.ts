@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { persistReducer } from 'redux-persist';
-import createElectronStorage from 'redux-persist-electron-storage';
+import storage from 'redux-persist/lib/storage';
 
 export type PreferencesState = {
   serverURI: string;
@@ -37,7 +37,7 @@ export const { setServerURI, setDbVersion } = prefsSlice.actions;
 
 const persistConfig = {
   key: 'prefs',
-  storage: createElectronStorage(),
+  storage,
   whitelist: ['serverURI'],
   blacklist: ['appVersion', 'dbVersion'],
 };
