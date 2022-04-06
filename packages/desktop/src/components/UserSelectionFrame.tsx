@@ -10,7 +10,6 @@ import {
   AlertTitle,
 } from '@mui/material';
 import { useLocation, useHistory } from 'react-router-dom';
-import UserCard from './UserCard';
 import {
   User,
   CrudCommand,
@@ -18,6 +17,7 @@ import {
   Entity,
   DeleteEntityCommand,
 } from 'common';
+import UserCard from './UserCard';
 import type { RootState } from '../redux/store';
 import { selectUser } from '../redux/slices/usersSlice';
 import { selectors } from '../redux/slices/benchesSlice';
@@ -37,10 +37,8 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
   const [response, setResponse] = useState<CommandResponse | undefined>(
     undefined
   );
-  const [
-    anchorForContextMenu,
-    setAnchorForContextMenu,
-  ] = useState<Element | null>(null);
+  const [anchorForContextMenu, setAnchorForContextMenu] =
+    useState<Element | null>(null);
   const dispatch = useDispatch();
   const { subscription } = useWebsocket();
   const goToEditUser = (): boolean => {

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { ipcRenderer } from 'electron';
-import Subscription, { Looper } from '../subscription';
+import { ErrorType } from 'typescript-logging';
+import Subscription, { wsEventHandler } from '../subscription';
 import { RootState } from '../redux/store';
+import { appLogger } from '../log';
 
 type GeneralContext = {
   subscription: Subscription | null;
@@ -20,8 +22,9 @@ type SocketManagerProps = {
   children: JSX.Element | JSX.Element[];
 };
 
+const subscription = new Subscription();
+
 const SocketManager = ({ children }: SocketManagerProps) => {
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const setInternetConnection = (val: boolean) => {
     setIsConnected(val);
@@ -32,18 +35,29 @@ const SocketManager = ({ children }: SocketManagerProps) => {
   );
   useEffect(() => {
     console.log(serverUri, 'changed');
-    if (subscription) {
-      subscription.disconnect();
-    }
-    const s = new Subscription(serverUri);
-    s.connect();
-    s.on('close', () => {
-      setInternetConnection(false);
+    const { stateObservable, eventObservable } =
+      subscription.connect(serverUri);
+    const disposeState = stateObservable.subscribe({
+      next: setInternetConnection,
+      error: () => setInternetConnection(false),
     });
-    s.on('open', () => {
-      setInternetConnection(true);
+    const disposeEvent = eventObservable.subscribe({
+      next: (event) => {
+        try {
+          wsEventHandler(event);
+        } catch (err) {
+          appLogger.error(
+            `Message from websocket is not JSON: ${event}`,
+            err as ErrorType
+          );
+        }
+      },
     });
-    setSubscription(s);
+    return () => {
+      subscription?.disconnect();
+      disposeState.unsubscribe();
+      disposeEvent.unsubscribe();
+    };
   }, [serverUri]);
   return (
     <SocketContext.Provider

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
+import { User, Bench } from 'common';
 import type { RootState } from '../redux/store';
 import { selectors } from '../redux/slices/benchesSlice';
 import type { Confirmation } from '../redux/slices/interactionsSlice';
-import { User, Bench } from 'common';
 import PendingDialog from './dialogs/Pending';
 import ConflictDialog from './dialogs/Conflict';
 import NoInternetOverlay from './dialogs/NoInternet';
