@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { createTheme, ThemeProvider, alpha } from '@mui/material/styles';
 import { grey } from '@mui/material/colors';
 import { User } from 'common';
 
@@ -44,7 +44,7 @@ const getDefaultThemeOpts = (user: User | null = null) => ({
       main: grey[800],
     },
     secondary: {
-      main: grey[100],
+      main: grey[200],
     },
     error: {
       main: '#f44336',
@@ -63,6 +63,15 @@ const getDefaultThemeOpts = (user: User | null = null) => ({
     },
     currentUser: {
       main: user?.color || grey.A400,
+    },
+  },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          background: alpha(grey[50], 0.05),
+        },
+      },
     },
   },
 });

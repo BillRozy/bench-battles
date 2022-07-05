@@ -1,5 +1,7 @@
 /* eslint global-require: off, import/no-extraneous-dependencies: off */
 
+const path = require('path');
+
 const developmentEnvironments = ['development', 'test'];
 
 const developmentPlugins = [require('@babel/plugin-transform-runtime')];
@@ -55,6 +57,18 @@ module.exports = (api) => {
       require('@babel/plugin-syntax-import-meta'),
       require('@babel/plugin-proposal-class-properties'),
       require('@babel/plugin-proposal-json-strings'),
+      [
+        'module-resolver',
+        {
+          root: ['./src'],
+          alias: {
+            '@': path.join(__dirname, 'src'),
+            '@redux': path.join(__dirname, 'src/redux'),
+            '@components': path.join(__dirname, 'src/components'),
+            '@img': path.join(__dirname, 'src/img'),
+          },
+        },
+      ],
 
       ...(development ? developmentPlugins : productionPlugins),
     ],

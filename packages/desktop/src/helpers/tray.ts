@@ -1,8 +1,8 @@
 import { Tray, Menu, BrowserWindow, ipcMain, App, nativeImage } from 'electron';
 import path from 'path';
+import { User, Bench } from 'common';
 import { BenchesState } from '../redux/slices/benchesSlice';
 import { UsersState } from '../redux/slices/usersSlice';
-import { User, Bench } from 'common';
 import SubscriptionCache from './subcache';
 
 let tray: Tray | null = null;

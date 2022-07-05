@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { connect, useDispatch } from 'react-redux';
 import {
   Grid,
@@ -9,21 +9,14 @@ import {
   Alert,
   AlertTitle,
 } from '@mui/material';
-import { useLocation, useHistory } from 'react-router-dom';
-import {
-  User,
-  CrudCommand,
-  CommandResponse,
-  Entity,
-  DeleteEntityCommand,
-} from 'common';
+import { User, CommandResponse } from 'common';
+import type { RootState } from '@redux/store';
+import { selectUser } from '@redux/slices/usersSlice';
+import { selectors } from '@redux/slices/benchesSlice';
+import useWithConfirmation from '@components/hooks/notification';
+import { Context } from '@components/notifications/NotificationsProvider';
 import UserCard from './UserCard';
-import type { RootState } from '../redux/store';
-import { selectUser } from '../redux/slices/usersSlice';
-import { selectors } from '../redux/slices/benchesSlice';
-import { requestConfirmation } from '../redux/slices/interactionsSlice';
-import { useWebsocket } from './SocketManager';
-import { appLogger as logger } from '../log';
+import { useUsersNavigation, useUsersCRUD } from './hooks';
 
 type UserSelectionProps = {
   users: User[];
@@ -31,8 +24,7 @@ type UserSelectionProps = {
 };
 
 const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
-  const location = useLocation();
-  const history = useHistory();
+  const { goToCreateUser } = useUsersNavigation();
   const [userToEdit, setUserToEdit] = useState<User | undefined>(undefined);
   const [response, setResponse] = useState<CommandResponse | undefined>(
     undefined
@@ -40,38 +32,28 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
   const [anchorForContextMenu, setAnchorForContextMenu] =
     useState<Element | null>(null);
   const dispatch = useDispatch();
-  const { subscription } = useWebsocket();
-  const goToEditUser = (): boolean => {
-    history.push({
-      pathname: `/users/new/`,
-      state: { background: location },
-    });
-    return true;
-  };
-  const deleteUser = async ({ id }: { id: number }) => {
-    dispatch(
-      requestConfirmation({
-        content: `Вы точно хотите удалить пользователя ${
-          users.find((it) => it.id === id)?.name
-        }?`,
-        onConfirm: async () => {
-          const resp = await subscription?.request({
-            command: CrudCommand.DELETE_ENTITY,
-            entity: Entity.USER,
-            data: {
-              id,
-            },
-          } as DeleteEntityCommand);
-          logger.info(`delete user response: ${resp}`);
-          if (!resp?.success) {
-            setResponse(resp);
-          }
-          setAnchorForContextMenu(null);
-        },
-        onCancel: () => {
-          setAnchorForContextMenu(null);
-        },
-      })
+  const withConfirmation = useWithConfirmation();
+  const { deleteUser } = useUsersCRUD();
+  const { showNotification } = useContext(Context);
+  const wrappedDeleteUser = async (user: User) => {
+    withConfirmation(
+      `Вы точно хотите удалить пользователя ${user.name}?`,
+      async () => {
+        const resp = await deleteUser(user);
+        if (!resp?.success) {
+          showNotification({
+            severity: 'error',
+            content: `Пользователь с ID: ${user.id} не был удален успешно - ${resp}`,
+          });
+        } else {
+          showNotification({
+            severity: 'success',
+            content: `Пользователь с ID: ${user.id} был удален успешно`,
+          });
+        }
+        setAnchorForContextMenu(null);
+      },
+      () => setAnchorForContextMenu(null)
     );
   };
   const canDelete = () => {
@@ -93,7 +75,6 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
             maxHeight: '600px',
           }}
           justifyContent="center"
-          // alignItems="center"
         >
           {users.map((it) => {
             return (
@@ -126,7 +107,7 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
               fullwidth
               clickable
               user={{ name: 'Создать Себя!', color: '#EEE', id: 0 }}
-              onClick={goToEditUser}
+              onClick={() => goToCreateUser(true)}
             />
           </Grid>
           {response != null && (
@@ -145,7 +126,11 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
               </Alert>
             </Grid>
           )}
+
           <Menu
+            sx={{
+              '& .MuiPaper-root': { backgroundColor: 'white' },
+            }}
             id="user-menu"
             aria-labelledby="user-button"
             anchorEl={anchorForContextMenu}
@@ -156,7 +141,7 @@ const UserSelectionFrame = ({ users, benchOwners }: UserSelectionProps) => {
               <MenuItem
                 disabled={!canDelete()}
                 onClick={() => {
-                  deleteUser({ id: userToEdit.id });
+                  wrappedDeleteUser(userToEdit);
                 }}
               >
                 Удалить

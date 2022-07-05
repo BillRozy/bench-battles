@@ -37,7 +37,10 @@ export default {
     extensions: ['.js', '.jsx', '.json', '.ts', '.tsx'],
     modules: [path.join(__dirname, '../src'), 'node_modules'],
     alias: {
-      '@': path.join(__dirname, '../src'),
+      '@': path.join(__dirname, '../../src'),
+      '@redux': path.join(__dirname, '../../src/redux'),
+      '@components': path.join(__dirname, '../../src/components'),
+      '@img': path.join(__dirname, '../../src/img'),
     },
   },
 

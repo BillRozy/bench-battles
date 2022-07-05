@@ -1,7 +1,6 @@
-import React from 'react';
-import { alpha, useTheme } from '@mui/material/styles';
-import { connect, useDispatch } from 'react-redux';
-import { useLocation, useHistory } from 'react-router-dom';
+import React, { HTMLAttributes, MouseEvent } from 'react';
+import { useTheme } from '@mui/material/styles';
+import { useDispatch } from 'react-redux';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -12,102 +11,65 @@ import ClickAwayListener from '@mui/material/ClickAwayListener';
 import Popover from '@mui/material/Popover';
 import MenuItem from '@mui/material/MenuItem';
 import MenuList from '@mui/material/MenuList';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import { grey } from '@mui/material/colors';
-import { OtherCommand, User } from 'common';
-import { useWebsocket } from './SocketManager';
-import type { RootState } from '../redux/store';
+import { User } from 'common';
 import { selectUser } from '../redux/slices/usersSlice';
+import { WhitePaper } from './styling';
 
-type Props = {
+export type TopNavigationPanelProps = {
   currentUser: User | null;
   appVersion: string | number;
   dbVersion: string | number;
   serverURI: string;
-};
+  openDrawerComponent: JSX.Element | undefined;
+} & HTMLAttributes<Element>;
 
-const TopNavigationPanel = ({
-  currentUser,
-  appVersion,
-  dbVersion,
-  serverURI,
-}: Props) => {
-  const { subscription } = useWebsocket();
-  const location = useLocation();
-  const history = useHistory();
+const TopNavigationPanel = React.forwardRef(function TopNavigationPanelInner(
+  {
+    currentUser,
+    appVersion,
+    dbVersion,
+    serverURI,
+    openDrawerComponent,
+    ...htmls
+  }: TopNavigationPanelProps,
+  ref
+) {
   const theme = useTheme();
   const dispatch = useDispatch();
-  const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(
-    null
-  );
-  const open = Boolean(anchorEl);
+  const [anchorEl, setAnchorEl] = React.useState<Element | null>(null);
+  const openContext = Boolean(anchorEl);
 
-  const handleMenu = (event: any) => {
+  const handleMenu = (event: MouseEvent<Element>) => {
     setAnchorEl(event.currentTarget);
   };
 
-  function handleListKeyDown(event: React.KeyboardEvent) {
+  const handleListKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Tab') {
       event.preventDefault();
     }
-  }
+  };
 
   const signOut = (): boolean => {
     dispatch(selectUser({ id: 0 } as User));
     return true;
   };
 
-  const goToEditBench = (): boolean => {
-    history.push({
-      pathname: `/${currentUser?.name}/benches/edit/`,
-      state: { background: location },
-    });
-    return true;
-  };
-
-  const goToEditUser = (): boolean => {
-    history.push({
-      pathname: `/${currentUser?.name}/users/edit/${currentUser?.id}`,
-      state: { background: location },
-    });
-    return true;
-  };
-
   const handleClose = () => {
     setAnchorEl(null);
   };
-  const handleBDClick = async (event: React.MouseEvent) => {
-    if (event.detail === 3) {
-      const resp = await subscription?.request({
-        command: OtherCommand.RESET_CACHE,
-      });
-      console.log(resp);
-    }
-  };
   return (
     <AppBar
-      position="static"
-      sx={{
-        backgroundColor:
-          currentUser !== null
-            ? alpha(currentUser.color, 0.5)
-            : theme.palette.primary.main,
-      }}
+      ref={ref as React.MutableRefObject<HTMLDivElement>}
+      className={htmls.className}
+      position="relative"
     >
-      <Toolbar variant="dense">
-        <Box flexGrow={1} color={grey[50]}>
-          <Typography
-            variant="h6"
-            sx={{
-              color: theme.palette.currentUser.contrastText,
-            }}
-          >
-            Попробуй занять себе бенч!
-          </Typography>
+      <Toolbar>
+        {openDrawerComponent}
+        <Box flexGrow={1}>
+          <Typography variant="h6">Попробуй занять себе бенч!</Typography>
         </Box>
         {currentUser && (
-          <Box position="relative" color={grey[50]}>
+          <Box position="relative">
             <IconButton
               disableRipple
               aria-label="account of current user"
@@ -117,17 +79,10 @@ const TopNavigationPanel = ({
               onClick={handleMenu}
             >
               <AccountCircle sx={{ marginRight: theme.spacing(2) }} />
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  color: theme.palette.currentUser.contrastText,
-                }}
-              >
-                {currentUser.name}
-              </Typography>
+              <Typography variant="subtitle1">{currentUser.name}</Typography>
             </IconButton>
             <Popover
-              open={open}
+              open={openContext}
               anchorEl={anchorEl}
               anchorOrigin={{
                 vertical: 'bottom',
@@ -139,49 +94,20 @@ const TopNavigationPanel = ({
               }}
             >
               <ClickAwayListener onClickAway={handleClose}>
-                <MenuList
-                  autoFocusItem={open}
-                  id="menu-list-grow"
-                  onKeyDown={handleListKeyDown}
-                >
-                  <MenuItem
-                    divider
-                    onClick={() => goToEditBench() && handleClose()}
+                <WhitePaper>
+                  <MenuList
+                    autoFocusItem={openContext}
+                    id="menu-list-grow"
+                    onKeyDown={handleListKeyDown}
                   >
-                    Добавить Бенч...
-                  </MenuItem>
-                  <MenuItem
-                    divider
-                    onClick={() => goToEditUser() && handleClose()}
-                  >
-                    Профиль
-                  </MenuItem>
-                  <MenuItem divider onClick={() => signOut() && handleClose()}>
-                    Выйти
-                  </MenuItem>
-                  <MenuItem disabled divider>
-                    <br />
-                  </MenuItem>
-                  <MenuItem divider disabled selected>
-                    Версии:
-                  </MenuItem>
-                  <MenuItem dense divider>
-                    <ListItemIcon>ПО: </ListItemIcon>
-                    <ListItemText inset>{appVersion}</ListItemText>
-                  </MenuItem>
-                  <MenuItem dense onClick={handleBDClick}>
-                    <ListItemIcon>БД: </ListItemIcon>
-                    <ListItemText inset>{dbVersion}</ListItemText>{' '}
-                  </MenuItem>
-                  <MenuItem divider disabled selected>
-                    Сервер:
-                  </MenuItem>
-                  <MenuItem dense>
-                    <ListItemText>
-                      {serverURI.includes('beta') ? 'Бета' : 'Основной'}
-                    </ListItemText>{' '}
-                  </MenuItem>
-                </MenuList>
+                    <MenuItem
+                      divider
+                      onClick={() => signOut() && handleClose()}
+                    >
+                      Выйти
+                    </MenuItem>
+                  </MenuList>
+                </WhitePaper>
               </ClickAwayListener>
             </Popover>
           </Box>
@@ -189,15 +115,6 @@ const TopNavigationPanel = ({
       </Toolbar>
     </AppBar>
   );
-};
+});
 
-const mapStateToProps = (state: RootState) => {
-  return {
-    currentUser: state.users.currentUser,
-    appVersion: state.preferences.appVersion,
-    dbVersion: state.preferences.dbVersion,
-    serverURI: state.preferences.serverURI,
-  };
-};
-
-export default connect(mapStateToProps)(TopNavigationPanel);
+export default TopNavigationPanel;

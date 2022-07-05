@@ -8,11 +8,13 @@ import { reduxLogger } from '../../log';
 export type BenchesState = {
   benchesIds: number[];
   benches: { [key: number]: Bench };
+  benchesFilteredByBuild: Bench[];
 };
 
 export const initialState: BenchesState = {
   benchesIds: [],
   benches: {},
+  benchesFilteredByBuild: [],
 };
 
 export const benchesSlice = createSlice({

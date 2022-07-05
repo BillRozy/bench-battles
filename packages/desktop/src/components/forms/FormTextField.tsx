@@ -1,28 +1,69 @@
 import React from 'react';
-import { TextField } from '@mui/material';
+import { Path } from 'react-hook-form';
+import { TextField, TextFieldProps } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import type { FormFieldProps } from './common';
 
-const FormTextField = ({ label, field, error, disabled }: FormFieldProps) => {
+export const LightTextField = styled(TextField)(({ theme }) => {
+  return {
+    '& label': {
+      color: theme.palette.secondary.main,
+      '&.Mui-focused': {
+        color: theme.palette.secondary.light,
+      },
+      '&.Mui-disabled': {
+        color: theme.palette.secondary.dark,
+      },
+    },
+    '& .MuiOutlinedInput-root': {
+      '& input': {
+        color: theme.palette.secondary.main,
+        '&.Mui-disabled': {
+          color: theme.palette.secondary.dark,
+          '-webkit-text-fill-color': theme.palette.secondary.dark,
+        },
+      },
+      '&.Mui-focused input': {
+        color: theme.palette.secondary.light,
+      },
+      '& fieldset': {
+        borderColor: theme.palette.secondary.main,
+      },
+      '&:hover fieldset': {
+        borderColor: theme.palette.secondary.light,
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: theme.palette.secondary.light,
+      },
+      '&.Mui-disabled fieldset': {
+        borderColor: theme.palette.secondary.dark,
+      },
+    },
+  };
+});
+
+const FormTextField = <T extends unknown, P extends Path<T>>({
+  label,
+  field,
+  error,
+  isLight = true,
+  variant = 'outlined',
+  disabled = false,
+  ...rest
+}: Omit<TextFieldProps, 'error'> & FormFieldProps<T, P>) => {
+  const Field = isLight ? LightTextField : TextField;
   return (
-    <TextField
-      disabled={disabled}
-      fullWidth
+    <Field
+      {...rest}
       error={error != null}
-      label={label}
-      variant="outlined"
+      variant={variant}
       helperText={error?.message}
-      ref={field.ref}
-      value={field.value}
-      onChange={field.onChange}
-      name={field.name}
-      onBlur={field.onBlur}
+      disabled={disabled}
+      {...field}
+      label={label}
       margin="normal"
     />
   );
-};
-
-FormTextField.defaultProps = {
-  disabled: false,
 };
 
 export default FormTextField;

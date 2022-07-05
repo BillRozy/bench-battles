@@ -1,8 +1,13 @@
 import React from 'react';
-import { grey } from '@mui/material/colors';
-import { alpha, useTheme, styled } from '@mui/material/styles';
-import { Paper, Chip, ChipProps, Button, ButtonGroup } from '@mui/material';
-import { xor } from 'lodash';
+import { useTheme, styled } from '@mui/material/styles';
+import {
+  Box,
+  Chip,
+  ChipProps,
+  Button,
+  ButtonGroup,
+  Slide,
+} from '@mui/material';
 
 const ChipWithMargin = styled(Chip)<ChipProps>(({ theme }) => ({
   margin: theme.spacing(0.5),
@@ -27,66 +32,58 @@ const FilterableTagsList = ({
         : [...selectedItems, item]
     );
   };
-  const selectAll = () => {
-    onSelectedListUpdate([...items]);
-  };
   const clearAll = () => {
     onSelectedListUpdate([]);
   };
-  const isAllSelected = xor(selectedItems, items).length === 0;
+  const isAnySelected = selectedItems.length > 0;
   return (
-    <Paper
-      component="ul"
-      sx={{
-        position: 'relative',
-        display: 'flex',
-        justifyContent: 'center',
-        flexWrap: 'wrap',
-        listStyle: 'none',
-        padding: theme.spacing(0.5),
-        background: alpha(grey[50], 0.05),
-        margin: 0,
-        flexGrow: 0,
-        maxHeight: '55px',
-      }}
-    >
-      {items.map((it) => {
-        return (
-          <li key={it}>
-            <ChipWithMargin
-              label={it}
-              variant={selectedItems.includes(it) ? 'filled' : 'outlined'}
-              color="currentUser"
-              onClick={() => toggleSelected(it)}
-            />
-          </li>
-        );
-      })}
-      <ButtonGroup
-        size="small"
-        variant="outlined"
-        color="secondary"
+    <Box>
+      <Slide direction="right" in={isAnySelected} mountOnEnter unmountOnExit>
+        <ButtonGroup
+          variant="text"
+          size="small"
+          disableElevation
+          sx={{
+            padding: '0.5em 1em',
+            '& > *': {
+              fontSize: '0.75em',
+            },
+          }}
+        >
+          <Button color="secondary" onClick={clearAll}>
+            Убрать фильтр
+          </Button>
+        </ButtonGroup>
+      </Slide>
+
+      <Box
+        component="ul"
         sx={{
-          position: 'absolute',
-          right: theme.spacing(2),
-          height: '32px',
-          top: 'calc(50% - 16px)',
+          display: 'flex',
+          listStyle: 'none',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          margin: 0,
+          padding: theme.spacing(0.5),
+          '& > *': {
+            margin: theme.spacing(0.5),
+          },
         }}
       >
-        <Button
-          variant={isAllSelected ? 'contained' : 'outlined'}
-          onClick={() => selectAll()}
-        >
-          Все
-        </Button>
-        <Button
-          variant={selectedItems.length === 0 ? 'contained' : 'outlined'}
-          onClick={() => clearAll()}
-        >
-          Ничего
-        </Button>
-      </ButtonGroup>
-    </Paper>
+        {items.map((it) => {
+          return (
+            <li key={it}>
+              <ChipWithMargin
+                label={it}
+                variant={selectedItems.includes(it) ? 'filled' : 'outlined'}
+                color="secondary"
+                onClick={() => toggleSelected(it)}
+              />
+            </li>
+          );
+        })}
+      </Box>
+    </Box>
   );
 };
 
