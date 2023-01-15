@@ -15,10 +15,12 @@
     "build": "yarn workspace backend build",
     "install-backend": "yarn workspaces focus backend",
     "start": "yarn workspace backend start",
-    "stop": "yarn workspace backend stop"
+    "stop": "yarn workspace backend stop",
+    "deploy": "yarn run install-backend && yarn run build",
+    "reset-db": "yarn workspace backend reset-db"
   },
   "engines": {
-    "node": ">=14.x",
+    "node": ">=18.x",
     "npm": ">=6.x",
     "yarn": ">=3.2.0"
   },

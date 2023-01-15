@@ -1,6 +1,5 @@
 import React from 'react';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
@@ -8,6 +7,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { BenchCommand, User, Bench } from 'common';
 import { useWebsocket } from '../SocketManager';
 import { fancySecondsFormat } from '../../helpers';
+import { WhiteDialog } from '../styling';
 
 type Props = {
   user: User;
@@ -29,7 +29,7 @@ const PendingDialog = ({ bench, user, timeLeft }: Props) => {
     userId: user.id,
   };
   return (
-    <Dialog
+    <WhiteDialog
       open
       // onClose={handleClose}
       aria-labelledby="alert-dialog-title"
@@ -64,7 +64,7 @@ const PendingDialog = ({ bench, user, timeLeft }: Props) => {
           Подтвердить
         </Button>
       </DialogActions>
-    </Dialog>
+    </WhiteDialog>
   );
 };
 

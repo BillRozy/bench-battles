@@ -1,9 +1,9 @@
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import { useDispatch } from 'react-redux';
+import { BenchCommand, OtherCommand } from 'common';
 import { useWebsocket } from './SocketManager';
 import { setServerURI } from '../redux/slices/preferencesSlice';
-import { BenchCommand, OtherCommand } from 'common';
 
 const Commander = () => {
   const dispatch = useDispatch();
@@ -27,8 +27,8 @@ const Commander = () => {
       dispatch(
         setServerURI(
           should_switch
-            ? 'http://bench-combat-beta.herokuapp.com'
-            : 'http://bench-combat.herokuapp.com'
+            ? 'https://bench-batles-backend-beta.onrender.com/'
+            : 'https://bench-batles-backend.onrender.com/'
         )
       );
     })

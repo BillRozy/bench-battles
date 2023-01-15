@@ -1,10 +1,10 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "name": "backend",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/client": "^3.0.2",
+    "@prisma/client": "4",
     "common": "workspace:*",
     "express": "^4.17.1",
     "express-pino-logger": "^6.0.0",
@@ -43,8 +43,9 @@
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.22.1",
     "nodemon": "^2.0.7",
-    "prisma": "^3.0.2",
-    "ts-node": "^9.1.1",
+    "prisma": "4",
+    "ts-node": "latest",
+    "ts-node-dev": "latest",
     "typescript": "^4.2.3"
   },
   "prisma": {

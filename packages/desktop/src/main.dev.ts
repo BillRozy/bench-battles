@@ -13,6 +13,10 @@ import 'regenerator-runtime/runtime';
 import path from 'path';
 import { app, BrowserWindow, shell, session } from 'electron';
 import * as remoteMain from '@electron/remote/main';
+import installExtension, {
+  REDUX_DEVTOOLS,
+  REACT_DEVELOPER_TOOLS,
+} from 'electron-devtools-installer';
 import registerTrayToMainWindow from './helpers/tray';
 import MenuBuilder from './menu';
 
@@ -33,20 +37,12 @@ if (
 }
 
 const installExtensions = async () => {
-  const PATH_TO_EXTS =
-    'C:/Users/Professional/AppData/Local/Google/Chrome/User Data/Default/Extensions';
-  const REACT_DEV_TOOLS = 'fmkadmapgofadopljbjfkapdkoienihi/4.18.0_0';
-  const REDUX_DEV_TOOLS = 'lmhkpmbekcpmknklioeibfkpmmfibljd/2.17.2_0';
-  const extensions = [REACT_DEV_TOOLS, REDUX_DEV_TOOLS];
-
   try {
-    extensions.forEach(async (ext) => {
-      await session.defaultSession.loadExtension(path.join(PATH_TO_EXTS, ext), {
-        allowFileAccess: true,
-      });
+    await installExtension([REDUX_DEVTOOLS, REACT_DEVELOPER_TOOLS], {
+      loadExtensionOptions: { allowFileAccess: true },
     });
   } catch (err) {
-    console.log(err);
+    console.error(err);
   }
 };
 

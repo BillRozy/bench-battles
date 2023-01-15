@@ -1,5 +1,4 @@
 import React, { MouseEventHandler } from 'react';
-import { useLocation, useHistory } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { alpha, useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
@@ -16,12 +15,16 @@ import {
 import { grey } from '@mui/material/colors';
 import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
 import { Info, Build, Clear } from '@mui/icons-material';
-import { StyledIconButton } from './utility/StyledIconButton';
-import { useWebsocket } from './SocketManager';
 import { BenchCommand, User, Bench, OtherCommand } from 'common';
-import UserCard from './UserCard';
-import type { RootState } from '../redux/store';
-import { establishRDPConnection, fancySecondsFormat } from '../helpers/index';
+import UserCard from '@components/users/UserCard';
+import { StyledIconButton } from '../utility/StyledIconButton';
+import { useWebsocket } from '../SocketManager';
+import type { RootState } from '../../redux/store';
+import {
+  establishRDPConnection,
+  fancySecondsFormat,
+} from '../../helpers/index';
+import { useBenchesNavigation } from './hooks';
 
 type BenchCardProps = {
   bench: Bench;
@@ -37,8 +40,7 @@ const benchActionBtnLabelForOwnedBench = 'В Очередь';
 
 const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
   const { subscription } = useWebsocket();
-  const history = useHistory();
-  const location = useLocation();
+  const { goToEditBench } = useBenchesNavigation(currentUser);
   const theme = useTheme();
   if (currentUser == null) return null;
   const handleClickMaintenance = () => {
@@ -93,12 +95,6 @@ const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
     ? theme.palette.neutral.dark
     : benchOwner?.color || theme.palette.neutral.main;
   const contrastColor = theme.palette.getContrastText(benchOwnerColor);
-  const editBench = () => {
-    history.push({
-      pathname: `/${currentUser?.name}/benches/edit/${bench.id}`,
-      state: { background: location },
-    });
-  };
   return (
     <Card
       square
@@ -152,7 +148,7 @@ const BenchCard = ({ bench, currentUser, users }: BenchCardProps) => {
               contrastColor={contrastColor}
               color={isUserOwner ? 'currentUser' : 'neutral'}
               title="Открыть информацию и редактирование"
-              onClick={editBench}
+              onClick={() => goToEditBench(bench)}
               endIcon={<Info />}
             />
             <StyledIconButton

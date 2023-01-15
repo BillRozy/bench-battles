@@ -1,0 +1,12 @@
+{
+  "eslint.alwaysShowStatus": true,
+  "eslint.workingDirectories": [
+    {
+      "directory": "./packages/desktop",
+      "changeProcessCWD": true
+    }
+  ],
+  "eslint.options": {
+  
+  }
+}

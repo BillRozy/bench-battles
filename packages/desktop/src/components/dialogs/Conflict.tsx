@@ -1,12 +1,12 @@
 import React, { Dispatch, SetStateAction } from 'react';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { BenchCommand, Bench, User } from 'common';
 import { useWebsocket } from '../SocketManager';
+import { WhiteDialog } from '../styling';
 
 type Props = {
   user: User;
@@ -30,7 +30,7 @@ const ConflictDialog = ({
       userId: user.id,
     } as BenchCommand);
   return (
-    <Dialog
+    <WhiteDialog
       open
       // onClose={handleClose}
       aria-labelledby="alert-dialog-title"
@@ -77,7 +77,7 @@ const ConflictDialog = ({
           Конфликт решен
         </Button>
       </DialogActions>
-    </Dialog>
+    </WhiteDialog>
   );
 };
 

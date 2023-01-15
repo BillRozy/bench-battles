@@ -1,10 +1,10 @@
 import React from 'react';
-import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
+import { WhiteDialog } from '../styling';
 
 const DEFAULT_TITLE = 'Требуется подтверждение';
 const DEFAULT_CONTENT =
@@ -24,7 +24,7 @@ const Confirmation = ({
   onConfirm,
 }: ConfirmationProps) => {
   return (
-    <Dialog
+    <WhiteDialog
       open
       // onClose={handleClose}
       aria-labelledby="alert-dialog-title"
@@ -44,7 +44,7 @@ const Confirmation = ({
           Подтверждаю
         </Button>
       </DialogActions>
-    </Dialog>
+    </WhiteDialog>
   );
 };
 

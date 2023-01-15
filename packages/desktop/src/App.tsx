@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Box } from '@mui/material';
+import { Box } from '@mui/material';
 import { StyledEngineProvider } from '@mui/material/styles';
 import { PersistGate } from 'redux-persist/integration/react';
 import { HashRouter as Router } from 'react-router-dom';
@@ -9,7 +9,8 @@ import SocketManager from './components/SocketManager';
 import { persistor } from './redux/store';
 import Commander from './components/Commander';
 import DialogManager from './components/DialogManager';
-import MainSwitch from './components/MainSwitch';
+import MainSwitch from './components/routing/MainSwitch';
+import NotificationsFrame from './components/notifications/NotificationsFrame';
 
 export default function App() {
   return (
@@ -26,12 +27,12 @@ export default function App() {
                 minWidth="520px"
                 minHeight="740px"
               >
-                <Container maxWidth="lg" disableGutters sx={{ height: '100%' }}>
-                  <Box height="100%" width="100%">
+                <Box height="100%" width="100%">
+                  <NotificationsFrame>
                     <DialogManager />
                     <MainSwitch />
-                  </Box>
-                </Container>
+                  </NotificationsFrame>
+                </Box>
               </Box>
             </DynamicThemeProvider>
           </Router>

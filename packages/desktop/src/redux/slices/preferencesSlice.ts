@@ -11,7 +11,7 @@ export type PreferencesState = {
 export const initialState: PreferencesState = {
   serverURI:
     process.env.NODE_ENV !== 'development'
-      ? 'http://bench-combat.herokuapp.com'
+      ? 'https://bench-batles-backend.onrender.com'
       : 'http://127.0.0.1:55555',
   appVersion: process.env.APP_VERSION || 'unknown',
   dbVersion: 'unknown',

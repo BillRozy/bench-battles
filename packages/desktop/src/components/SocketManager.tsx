@@ -34,7 +34,7 @@ const SocketManager = ({ children }: SocketManagerProps) => {
     (state: RootState) => state.preferences.serverURI
   );
   useEffect(() => {
-    console.log(serverUri, 'changed');
+    appLogger.info(`Changed server URI to ${serverUri}`);
     const { stateObservable, eventObservable } =
       subscription.connect(serverUri);
     const disposeState = stateObservable.subscribe({
