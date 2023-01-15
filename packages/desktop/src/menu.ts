@@ -305,16 +305,16 @@ export default class MenuBuilder {
         ],
       },
       {
-        label: 'Сервер',
+        label: 'Backend',
         submenu: [
           {
-            label: 'Основной',
+            label: 'Main',
             click() {
               sender.send('switch-to-beta', false);
             },
           },
           {
-            label: 'Бета',
+            label: 'Beta',
             click() {
               sender.send('switch-to-beta', true);
             },

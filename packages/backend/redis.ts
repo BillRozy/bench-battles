@@ -4,7 +4,6 @@ import { URL } from 'url';
 
 export default async function createRedisClient() {
     let client : ReturnType<typeof createClient> | null = null;
-    logger.info('Redis url ' + process.env.REDIS_URL)
     if (process.env.REDIS_URL) {
         const url = new URL(process.env.REDIS_URL);
         logger.info('Redis url ' + url.toString())

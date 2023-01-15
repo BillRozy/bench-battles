@@ -27,8 +27,8 @@ const Commander = () => {
       dispatch(
         setServerURI(
           should_switch
-            ? 'http://bench-combat-beta.herokuapp.com'
-            : 'http://bench-combat.herokuapp.com'
+            ? 'https://bench-batles-backend-beta.onrender.com/'
+            : 'https://bench-batles-backend.onrender.com/'
         )
       );
     })

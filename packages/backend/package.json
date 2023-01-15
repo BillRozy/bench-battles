@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "name": "backend",
   "type": "commonjs",
@@ -44,7 +44,8 @@
     "eslint-plugin-import": "^2.22.1",
     "nodemon": "^2.0.7",
     "prisma": "4",
-    "ts-node": "^9.1.1",
+    "ts-node": "latest",
+    "ts-node-dev": "latest",
     "typescript": "^4.2.3"
   },
   "prisma": {
