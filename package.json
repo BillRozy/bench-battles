@@ -15,7 +15,8 @@
     "build": "yarn workspace backend build",
     "install-backend": "yarn workspaces focus backend",
     "start": "yarn workspace backend start",
-    "stop": "yarn workspace backend stop"
+    "stop": "yarn workspace backend stop",
+    "deploy": "yarn install-backend && yarn build && yarn start"
   },
   "engines": {
     "node": ">=14.x",

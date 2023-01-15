@@ -8,26 +8,26 @@ datasource db {
 }
 
 model Version {
-  id             Int           @id(map: "Versions_pkey") @default(autoincrement())
-  version        Int
+  id      Int @id(map: "Versions_pkey") @default(autoincrement())
+  version Int
 }
 
 model Bench {
-  name           String
-  id             Int           @id(map: "Benches_pkey") @default(autoincrement())
-  ip             String?
-  stid           String?
-  build          String?
-  swVer          String?
-  voiceControl   Boolean?
-  gsimCredId     Int?
+  name            String
+  id              Int             @id(map: "Benches_pkey") @default(autoincrement())
+  ip              String?
+  stid            String?
+  build           String?
+  voiceControl    Boolean?
+  gsimCredId      Int?
+  swVer           String?
   gsimCredentials GsimCredential? @relation(fields: [gsimCredId], references: [id], onUpdate: NoAction, map: "gsimConstraint")
 
   @@index([gsimCredId], map: "fki_gsimConstraint")
 }
 
 model GsimCredential {
-  id       Int      @id(map: "GsimCreds_pkey") @default(autoincrement())
+  id       Int     @id(map: "GsimCreds_pkey") @default(autoincrement())
   username String
   password String
   bench    Bench[]
@@ -36,5 +36,5 @@ model GsimCredential {
 model User {
   name  String
   color String?
-  id    Int      @id(map: "Users_pkey") @default(autoincrement())
+  id    Int     @id(map: "Users_pkey") @default(autoincrement())
 }
